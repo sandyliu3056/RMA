@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>售後零件規劃平台</title>
+<style>
+  :root { --navy:#3B2A1A; --gold:#F2B134; --bg:#FBF6EC; --card:#FFFDF7; --line:#D9CBB6; --ink:#3B2A1A; --mute:#7A6652; --orange:#E8862B; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif; line-height:1.7; }
+  header { background:var(--navy); color:var(--gold); padding:22px 24px; }
+  header h1 { margin:0; font-size:1.6rem; }
+  header p { margin:4px 0 0; color:#D9C7A8; font-size:.9rem; }
+  main { max-width:860px; margin:0 auto; padding:24px 16px 48px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; display:flex; flex-direction:column; gap:8px; }
+  .card h2 { margin:0; font-size:1.05rem; border-left:4px solid var(--orange); padding-left:8px; }
+  .card p { margin:0; color:var(--mute); font-size:.92rem; flex:1; }
+  .btn { display:inline-block; text-align:center; background:#6B4E31; color:#fff; text-decoration:none; border-radius:8px; padding:9px 14px; font-weight:700; }
+  .btn.alt { background:var(--card); color:var(--ink); border:1px solid var(--line); }
+  .note { margin-top:22px; background:#F6EFE3; border:1px solid var(--line); border-radius:10px; padding:14px 16px; font-size:.9rem; }
+  ol { padding-left:1.3em; margin:6px 0 0; }
+  code { background:#F0E6D6; padding:1px 5px; border-radius:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>售後零件規劃平台</h1>
+  <p>AIO 案件資料 → 需求規劃、庫存與缺料、出貨與到貨、報表與分析</p>
+</header>
+<main>
+  <div class="grid">
+    <section class="card">
+      <h2>網頁版</h2>
+      <p>任何電腦、手機開瀏覽器就能用。第一次要先按下面的按鈕部署到 Streamlit（免費，用 GitHub 帳號登入，約 5 分鐘），之後會得到一個 <code>xxxx.streamlit.app</code> 網址。</p>
+      <a class="btn" href="https://share.streamlit.io/deploy?repository=sandyliu3056/RMA&branch=claude/funny-gauss-h7fxud&mainModule=web_app.py">部署網頁版（第一次）</a>
+    </section>
+    <section class="card">
+      <h2>Windows 版（exe）</h2>
+      <p>不用裝 Python，下載後雙擊就能用。到 Actions 頁點最新一次「Build Windows exe」，最下方 Artifacts 下載 <code>RMA_PartsPlanner-windows</code>。</p>
+      <a class="btn alt" href="https://github.com/sandyliu3056/RMA/actions/workflows/build-exe.yml">下載 Windows 版</a>
+    </section>
+    <section class="card">
+      <h2>說明與程式碼</h2>
+      <p>資料規則、六個模組的內容、訂單檔格式、常見問題都在 README。</p>
+      <a class="btn alt" href="https://github.com/sandyliu3056/RMA#readme">查看 README</a>
+    </section>
+  </div>
+  <div class="note">
+    <strong>這一頁只是入口。</strong>GitHub Pages 只能放靜態網頁，沒辦法執行 Python 程式，所以網頁版本身要放在 Streamlit Community Cloud。部署步驟：
+    <ol>
+      <li>按上面「部署網頁版」，用 GitHub 帳號登入 Streamlit。</li>
+      <li>確認 Repository 是 <code>sandyliu3056/RMA</code>、Main file path 是 <code>web_app.py</code>，按 Deploy。</li>
+      <li>等它裝完套件（第一次約 3–5 分鐘），就會跳到你的網址。</li>
+      <li>App 設定 → Sharing → 把「Who can view this app」改成只有你的 email，因為 AIO 檔含客戶資料。</li>
+    </ol>
+  </div>
+</main>
+</body>
+</html>
