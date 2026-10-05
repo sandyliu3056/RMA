@@ -1,0 +1,62 @@
+name: Build Windows exe
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build exe
+        run: >
+          pyinstaller --noconfirm --clean --onefile --windowed
+          --name RMA_PartsPlanner
+          --hidden-import 零件規劃平台
+          --hidden-import rma_engine
+          --hidden-import PIL.ImageTk
+          --hidden-import PIL._tkinter_finder
+          --collect-data pptx
+          --collect-data matplotlib
+          app_launcher.py
+
+      - name: Smoke test (exe starts and exits)
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "dist\RMA_PartsPlanner.exe" -PassThru
+          Start-Sleep -Seconds 15
+          if ($p.HasExited) { Write-Error "exe exited early with code $($p.ExitCode)"; Get-Content dist\啟動錯誤.log -ErrorAction SilentlyContinue; exit 1 }
+          Stop-Process -Id $p.Id -Force
+          Write-Host "exe stayed alive for 15s - OK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RMA_PartsPlanner-windows
+          path: dist/RMA_PartsPlanner.exe
+          if-no-files-found: error
+
+      - name: Release (on v* tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/RMA_PartsPlanner.exe
+          generate_release_notes: true

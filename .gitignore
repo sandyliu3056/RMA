@@ -3,3 +3,7 @@ __pycache__/
 RMA_output/
 _charts/
 協調待辦.json
+build/
+dist/
+*.spec
+啟動錯誤.log

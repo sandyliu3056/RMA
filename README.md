@@ -28,6 +28,18 @@ python rma_engine.py "0820-0921 AIO data.xlsx" 輸出資料夾 --start 2026-08-0
 
 輸出資料夾會有 `RMA分析結果.xlsx`（每項分析的表格、KPI 總表、投影片文字）、`RMA分析報告.pptx`（每項分析一頁：重點、圖、結論，段落在備忘稿）、`charts/`（11 張 PNG）。
 
+## 不用裝 Python：單一 exe
+
+每次推送到 GitHub，`.github/workflows/build-exe.yml` 會在 GitHub 的 Windows 機器上自動打包成 `RMA_PartsPlanner.exe`：
+
+- 到 repo 的 **Actions** 頁 → 點最新一次「Build Windows exe」→ 最下方 **Artifacts** 下載 `RMA_PartsPlanner-windows`。
+- 推送 `v1.0` 這類標籤時，會另外建立 **Release**，exe 直接掛在 Releases 頁面，不用登入也能下載。
+
+把 exe 複製到任何 Windows 電腦雙擊即可，第一次啟動約 10–20 秒。`協調待辦.json` 和 `_charts/` 會存在 exe 旁邊。
+啟動失敗時，exe 旁邊會出現 `啟動錯誤.log`。
+
+也可以在自己電腦打包：雙擊 `build_exe.bat`，完成後在 `dist/` 資料夾。
+
 ## 資料規則
 
 - 讀取工作表 `AllInOneData`（沒有時取第一張），自動找 `CaseID` 所在列當標題，略過中文說明列。

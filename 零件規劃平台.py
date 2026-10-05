@@ -18,6 +18,8 @@ from tkinter import ttk, filedialog, messagebox
 
 import pandas as pd
 
+# 程式所在資料夾：打包成 exe 時 __file__ 指向暫存目錄，要改用 exe 的位置
+BASE_DIR = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rma_engine as E
 
@@ -25,8 +27,8 @@ APP_TITLE = "售後零件規劃平台"
 # 配色：深咖啡色標題列、金黃色分頁列、米色內容區（Brown Gold 主題）
 NAVY, ORANGE, BG, CARD, INK, MUTE = "#3B2A1A", "#E8862B", "#FBF6EC", "#FFFDF7", "#3B2A1A", "#7A6652"
 GOLD, TABBAR, LINE, STRIPE, HOVER, SELECT = "#F2B134", "#F5A623", "#D9CBB6", "#F6EFE3", "#FFE2A8", "#F8D98F"
-FONT = FONT
-ACTIONS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "協調待辦.json")
+FONT = "Microsoft JhengHei"
+ACTIONS_FILE = os.path.join(BASE_DIR, "協調待辦.json")
 UNITS = ["各國規劃人員", "供應商", "總部服務團隊", "倉庫／物流", "維修據點", "其他"]
 
 
@@ -174,7 +176,7 @@ class App(tk.Tk):
         self.data = None
         self.report = None
         self.parts = None
-        self.chart_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_charts")
+        self.chart_dir = os.path.join(BASE_DIR, "_charts")
         self._photo = None
 
         # 標題列：深咖啡底、金黃色標題，右側時鐘與資料狀態
@@ -192,13 +194,13 @@ class App(tk.Tk):
 
         self.nb = ttk.Notebook(self)
         self.nb.pack(fill="both", expand=True)
-        self.tab_source = ttk.Frame(self.nb); self.nb.add(self.tab_source, text="📂 資料來源")
-        self.tab_demand = ttk.Frame(self.nb); self.nb.add(self.tab_demand, text="📈 需求規劃")
-        self.tab_stock = ttk.Frame(self.nb); self.nb.add(self.tab_stock, text="📦 庫存與缺料")
-        self.tab_po = ttk.Frame(self.nb); self.nb.add(self.tab_po, text="🧾 訂單與交期")
-        self.tab_ship = ttk.Frame(self.nb); self.nb.add(self.tab_ship, text="🚚 出貨與到貨")
-        self.tab_report = ttk.Frame(self.nb); self.nb.add(self.tab_report, text="📊 報表與分析")
-        self.tab_coord = ttk.Frame(self.nb); self.nb.add(self.tab_coord, text="🤝 跨單位協調")
+        self.tab_source = ttk.Frame(self.nb); self.nb.add(self.tab_source, text="資料來源")
+        self.tab_demand = ttk.Frame(self.nb); self.nb.add(self.tab_demand, text="需求規劃")
+        self.tab_stock = ttk.Frame(self.nb); self.nb.add(self.tab_stock, text="庫存與缺料")
+        self.tab_po = ttk.Frame(self.nb); self.nb.add(self.tab_po, text="訂單與交期")
+        self.tab_ship = ttk.Frame(self.nb); self.nb.add(self.tab_ship, text="出貨與到貨")
+        self.tab_report = ttk.Frame(self.nb); self.nb.add(self.tab_report, text="報表與分析")
+        self.tab_coord = ttk.Frame(self.nb); self.nb.add(self.tab_coord, text="跨單位協調")
         self._build_source()
         self._build_demand()
         self._build_stock()
