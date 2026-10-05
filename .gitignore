@@ -7,3 +7,7 @@ build/
 dist/
 *.spec
 啟動錯誤.log
+_pyodide
+_xlsx.full.min.js
+config.local.js
+_wheels

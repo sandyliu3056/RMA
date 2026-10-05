@@ -4,57 +4,224 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>售後零件規劃平台</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <style>
-  :root { --navy:#3B2A1A; --gold:#F2B134; --bg:#FBF6EC; --card:#FFFDF7; --line:#D9CBB6; --ink:#3B2A1A; --mute:#7A6652; --orange:#E8862B; }
+  :root { --navy:#3B2A1A; --gold:#F2B134; --tabbar:#F5A623; --bg:#FBF6EC; --card:#FFFDF7; --line:#D9CBB6; --ink:#3B2A1A; --mute:#7A6652; --orange:#E8862B; --hover:#FFE2A8; --stripe:#F6EFE3; --btn:#6B4E31; }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif; line-height:1.7; }
-  header { background:var(--navy); color:var(--gold); padding:22px 24px; }
-  header h1 { margin:0; font-size:1.6rem; }
-  header p { margin:4px 0 0; color:#D9C7A8; font-size:.9rem; }
-  main { max-width:860px; margin:0 auto; padding:24px 16px 48px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; display:flex; flex-direction:column; gap:8px; }
-  .card h2 { margin:0; font-size:1.05rem; border-left:4px solid var(--orange); padding-left:8px; }
-  .card p { margin:0; color:var(--mute); font-size:.92rem; flex:1; }
-  .btn { display:inline-block; text-align:center; background:#6B4E31; color:#fff; text-decoration:none; border-radius:8px; padding:9px 14px; font-weight:700; }
-  .btn.alt { background:var(--card); color:var(--ink); border:1px solid var(--line); }
-  .note { margin-top:22px; background:#F6EFE3; border:1px solid var(--line); border-radius:10px; padding:14px 16px; font-size:.9rem; }
-  ol { padding-left:1.3em; margin:6px 0 0; }
-  code { background:#F0E6D6; padding:1px 5px; border-radius:4px; }
+  html, body { margin:0; background:var(--bg); color:var(--ink); font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif; font-size:14px; line-height:1.6; }
+  .wrap { max-width:1400px; margin:0 auto; padding:12px 16px 40px; }
+  /* 標題列 */
+  .hdr { background:var(--navy); color:var(--gold); border-radius:10px; padding:14px 22px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .hdr h1 { margin:0; font-size:1.5rem; }
+  .hdr .sub { color:#D9C7A8; font-size:.85rem; }
+  .hdr .clock { text-align:right; white-space:nowrap; }
+  .hdr .clock .t { font-family:Consolas, monospace; font-size:1.5rem; font-weight:700; line-height:1; }
+  .hdr .clock .d { color:#D9C7A8; font-size:.78rem; }
+  .hdr a { color:#D9C7A8; font-size:.8rem; margin-left:12px; }
+  /* 分頁列 */
+  .tabs { display:flex; flex-wrap:wrap; gap:4px; background:var(--tabbar); border-radius:8px; padding:5px 6px; margin:10px 0 14px; }
+  .tabs button { background:var(--gold); color:var(--ink); border:0; border-radius:6px; padding:7px 16px; font-weight:700; font-family:inherit; font-size:.95rem; cursor:pointer; }
+  .tabs button:hover { background:var(--hover); }
+  .tabs button.active { background:var(--bg); }
+  .tab { display:none; }
+  .tab.active { display:block; }
+  /* 元件 */
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin:6px 0 10px; }
+  .row label { display:flex; flex-direction:column; gap:3px; font-size:.85rem; color:var(--mute); }
+  input, select { font-family:inherit; font-size:.95rem; padding:7px 9px; border:1px solid var(--line); border-radius:7px; background:var(--card); color:var(--ink); }
+  input[type=file] { padding:5px; }
+  .btn { font-family:inherit; font-size:.92rem; padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
+  .btn:hover { background:var(--hover); }
+  .btn.primary { background:var(--btn); border-color:var(--btn); color:#fff; font-weight:700; }
+  .btn.primary:hover { background:#4F3A24; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin:10px 0; }
+  .kpi { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 14px; }
+  .kpi .k { color:var(--mute); font-size:.8rem; }
+  .kpi .v { color:var(--navy); font-size:1.45rem; font-weight:700; line-height:1.3; }
+  .section { border-left:4px solid var(--orange); padding-left:8px; font-weight:700; font-size:1.05rem; margin:16px 0 6px; }
+  .caption { color:var(--mute); font-size:.85rem; }
+  .tbl { overflow:auto; max-height:420px; border:1px solid var(--line); border-radius:8px; background:var(--card); }
+  .tbl.tall { max-height:520px; }
+  table { border-collapse:collapse; width:100%; font-size:.88rem; }
+  th { position:sticky; top:0; background:var(--btn); color:#fff; text-align:left; padding:7px 10px; font-weight:700; white-space:nowrap; }
+  td { padding:6px 10px; border-bottom:1px solid #EFE6D8; white-space:nowrap; }
+  tr:nth-child(even) td { background:var(--stripe); }
+  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:900px) { .two { grid-template-columns:1fr; } }
+  .bars { display:flex; align-items:flex-end; gap:12px; height:220px; padding:10px 8px 0; border:1px solid var(--line); border-radius:8px; background:var(--card); }
+  .bars .b { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; font-size:.78rem; color:var(--mute); }
+  .bars .b i { display:block; width:70%; background:var(--orange); border-radius:4px 4px 0 0; }
+  .bars .b b { color:var(--ink); font-size:.82rem; }
+  .log { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-family:Consolas, monospace; font-size:.82rem; height:200px; overflow:auto; white-space:pre-wrap; }
+  .notice { background:#F6EFE3; border:1px solid var(--line); border-radius:8px; padding:10px 14px; font-size:.9rem; margin:8px 0; }
+  .boot { display:flex; align-items:center; gap:10px; }
+  .spin { width:16px; height:16px; border:3px solid var(--line); border-top-color:var(--orange); border-radius:50%; animation:sp 1s linear infinite; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .report { display:grid; grid-template-columns:260px 1fr; gap:16px; }
+  @media (max-width:900px) { .report { grid-template-columns:1fr; } }
+  .alist button { display:block; width:100%; text-align:left; background:none; border:0; border-radius:6px; padding:6px 8px; font-family:inherit; font-size:.92rem; color:var(--ink); cursor:pointer; }
+  .alist button:hover { background:var(--hover); }
+  .alist button.active { background:var(--card); font-weight:700; border:1px solid var(--line); }
+  .rbody { display:grid; grid-template-columns:1fr 1.5fr; gap:16px; }
+  @media (max-width:1100px) { .rbody { grid-template-columns:1fr; } }
+  .rbody img { width:100%; border:1px solid var(--line); border-radius:8px; background:#fff; }
+  .rbody ul { padding-left:1.2em; margin:6px 0; }
+  .stack { display:flex; flex-direction:column; gap:8px; }
+  .toast { position:fixed; right:16px; bottom:16px; background:var(--navy); color:#fff; padding:10px 16px; border-radius:8px; max-width:420px; font-size:.9rem; display:none; z-index:9; white-space:pre-wrap; }
+  .late { color:#B5544C; font-weight:700; }
+  .small { font-size:.82rem; color:var(--mute); }
 </style>
 </head>
 <body>
-<header>
-  <h1>售後零件規劃平台</h1>
-  <p>AIO 案件資料 → 需求規劃、庫存與缺料、出貨與到貨、報表與分析</p>
-</header>
-<main>
-  <div class="grid">
-    <section class="card">
-      <h2>網頁版</h2>
-      <p>任何電腦、手機開瀏覽器就能用。第一次要先按下面的按鈕部署到 Streamlit（免費，用 GitHub 帳號登入，約 5 分鐘），之後會得到一個 <code>xxxx.streamlit.app</code> 網址。</p>
-      <a class="btn" href="https://share.streamlit.io/deploy?repository=sandyliu3056/RMA&branch=claude/funny-gauss-h7fxud&mainModule=web_app.py">部署網頁版（第一次）</a>
-    </section>
-    <section class="card">
-      <h2>Windows 版（exe）</h2>
-      <p>不用裝 Python，下載後雙擊就能用。到 Actions 頁點最新一次「Build Windows exe」，最下方 Artifacts 下載 <code>RMA_PartsPlanner-windows</code>。</p>
-      <a class="btn alt" href="https://github.com/sandyliu3056/RMA/actions/workflows/build-exe.yml">下載 Windows 版</a>
-    </section>
-    <section class="card">
-      <h2>說明與程式碼</h2>
-      <p>資料規則、六個模組的內容、訂單檔格式、常見問題都在 README。</p>
-      <a class="btn alt" href="https://github.com/sandyliu3056/RMA#readme">查看 README</a>
-    </section>
-  </div>
-  <div class="note">
-    <strong>這一頁只是入口。</strong>GitHub Pages 只能放靜態網頁，沒辦法執行 Python 程式，所以網頁版本身要放在 Streamlit Community Cloud。部署步驟：
-    <ol>
-      <li>按上面「部署網頁版」，用 GitHub 帳號登入 Streamlit。</li>
-      <li>確認 Repository 是 <code>sandyliu3056/RMA</code>、Main file path 是 <code>web_app.py</code>，按 Deploy。</li>
-      <li>等它裝完套件（第一次約 3–5 分鐘），就會跳到你的網址。</li>
-      <li>App 設定 → Sharing → 把「Who can view this app」改成只有你的 email，因為 AIO 檔含客戶資料。</li>
-    </ol>
-  </div>
-</main>
+<div class="wrap">
+  <header class="hdr">
+    <div>
+      <h1>售後零件規劃平台</h1>
+      <div class="sub" id="status">尚未載入資料</div>
+    </div>
+    <div class="clock">
+      <div class="t" id="clock">--:--</div>
+      <div class="d"><span id="date"></span> Taipei <a href="https://github.com/sandyliu3056/RMA/actions/workflows/build-exe.yml" target="_blank" rel="noopener">Windows 版下載</a></div>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="source" class="active">資料來源</button>
+    <button data-tab="demand">需求規劃</button>
+    <button data-tab="stock">庫存與缺料</button>
+    <button data-tab="po">訂單與交期</button>
+    <button data-tab="ship">出貨與到貨</button>
+    <button data-tab="report">報表與分析</button>
+    <button data-tab="coord">跨單位協調</button>
+  </nav>
+
+  <!-- 資料來源 -->
+  <section class="tab active" id="tab-source">
+    <div class="notice boot" id="boot"><span class="spin"></span><span id="boot-msg">啟動瀏覽器版 Python…</span></div>
+    <div class="row">
+      <label>AIO 匯出檔（.xlsx，工作表 AllInOneData）<input type="file" id="aio" accept=".xlsx,.xlsm" disabled></label>
+      <label>分析起日（留空＝資料最後日期的前一個月 1 日）<input type="text" id="start" placeholder="2026-08-01" size="14"></label>
+      <button class="btn primary" id="load" disabled>載入並分析</button>
+    </div>
+    <div class="kpis" id="src-kpis"></div>
+    <div class="caption" id="src-caption"></div>
+    <div class="log" id="log">1. 選擇 AIO 匯出檔（.xlsx，工作表 AllInOneData）
+2. 按「載入並分析」，第一次約 1 分鐘（分析在你的瀏覽器裡進行，檔案不會上傳到任何伺服器）
+3. 到各分頁查看，或在「報表與分析」下載 Excel／PPT</div>
+    <div id="src-status" style="display:none">
+      <div class="section">各狀態在途件數</div>
+      <div class="two"><div class="tbl" id="src-status-tbl"></div><div class="bars" id="src-status-chart"></div></div>
+    </div>
+  </section>
+
+  <!-- 需求規劃 -->
+  <section class="tab" id="tab-demand">
+    <div class="row">
+      <label>彙總依<select id="d-by"><option>國家</option><option>類型分組</option></select></label>
+      <label>預測未來（週）<input type="number" id="d-weeks" min="1" max="13" value="4" style="width:80px"></label>
+      <button class="btn" id="d-run">重新計算</button>
+    </div>
+    <div class="section">每週申請零件顆數（完整週）</div>
+    <div class="two"><div class="tbl" id="d-weekly"></div><div class="bars" id="d-chart"></div></div>
+    <div class="row"><button class="btn" id="d-weekly-dl">匯出 Excel</button></div>
+    <div class="section" id="d-fc-title">未來 4 週需求推估（最近 4 個完整週平均 × 週數；高峰＝最高週 × 週數）</div>
+    <div class="tbl" id="d-forecast"></div>
+    <div class="section">申請次數最多的料號（Top 30）：申請顆數、未使用率、目前待供貨顆數</div>
+    <div class="tbl tall" id="d-top"></div>
+    <div class="row"><button class="btn" id="d-top-dl">匯出料號表</button></div>
+  </section>
+
+  <!-- 庫存與缺料 -->
+  <section class="tab" id="tab-stock">
+    <div class="kpis" id="s-kpis"></div>
+    <div class="section">缺料料號（Awaiting Spares 案件中待供貨的料號）</div>
+    <div class="tbl" id="s-parts"></div>
+    <div class="row"><button class="btn" id="s-parts-dl">匯出料號清單</button></div>
+    <div class="row">
+      <label>催料清單：等待天數 ≥<input type="number" id="s-days" min="1" max="60" value="14" style="width:80px"></label>
+      <button class="btn" id="s-run">重新整理</button>
+    </div>
+    <div class="section" id="s-cases-title">催料案件清單</div>
+    <div class="tbl tall" id="s-cases"></div>
+    <div class="row"><button class="btn" id="s-cases-dl">匯出催料清單</button></div>
+  </section>
+
+  <!-- 訂單與交期 -->
+  <section class="tab" id="tab-po">
+    <div class="caption">AIO 資料沒有採購訂單，這個模組用匯入的訂單檔計算準交率與逾期清單。</div>
+    <div class="row">
+      <button class="btn" id="po-tmpl">下載訂單範本</button>
+      <label>匯入訂單檔（Excel／CSV）<input type="file" id="po-file" accept=".xlsx,.xls,.csv"></label>
+    </div>
+    <div class="kpis" id="po-kpis"></div>
+    <div id="po-body" style="display:none">
+      <div class="section">供應商準交率</div>
+      <div class="tbl" id="po-sup"></div>
+      <div class="section">逾期與未交訂單</div>
+      <div class="tbl" id="po-late"></div>
+      <div class="row"><button class="btn" id="po-late-dl">匯出逾期清單</button></div>
+    </div>
+  </section>
+
+  <!-- 出貨與到貨 -->
+  <section class="tab" id="tab-ship">
+    <div class="row">
+      <label>保固到期清單：天數內<input type="number" id="h-days" min="7" max="180" step="7" value="30" style="width:80px"></label>
+      <button class="btn" id="h-run">重新整理</button>
+    </div>
+    <div class="kpis" id="h-kpis"></div>
+    <div class="two">
+      <div><div class="section">待出貨積壓（依據點）</div><div class="tbl" id="h-backlog"></div><div class="row"><button class="btn" id="h-backlog-dl">匯出待出貨積壓</button></div></div>
+      <div><div class="section">零件運送中／已配貨（依國家，在途案件）</div><div class="tbl" id="h-transit"></div></div>
+    </div>
+    <div class="section">在途且保固即將到期（含建案時保固內、現已過期）</div>
+    <div class="tbl tall" id="h-exp"></div>
+    <div class="row"><button class="btn" id="h-exp-dl">匯出到期清單</button></div>
+  </section>
+
+  <!-- 報表與分析 -->
+  <section class="tab" id="tab-report">
+    <div class="report">
+      <div>
+        <div class="section">分析項目</div>
+        <div class="alist" id="r-list"></div>
+        <div class="section">匯出</div>
+        <div class="stack">
+          <button class="btn" id="r-xlsx">匯出 Excel 表格</button>
+          <button class="btn" id="r-pptx">匯出 PPT 報告</button>
+          <button class="btn" id="r-charts">匯出全部圖 PNG（zip）</button>
+        </div>
+      </div>
+      <div id="r-body"><div class="caption">請先載入資料，再從左側選一項分析</div></div>
+    </div>
+  </section>
+
+  <!-- 跨單位協調 -->
+  <section class="tab" id="tab-coord">
+    <div class="caption">待辦存在這台電腦的瀏覽器裡（換電腦看不到）。要帶到別台電腦，請用「下載待辦」存成 JSON，再「還原待辦」上傳。</div>
+    <div class="row">
+      <label>對象單位<select id="c-unit"></select></label>
+      <label>議題<input type="text" id="c-topic" size="50"></label>
+      <label>負責人<input type="text" id="c-owner" size="10"></label>
+      <label>到期日<input type="date" id="c-due"></label>
+      <label>狀態<select id="c-status"><option>進行中</option><option>待回覆</option><option>已完成</option><option>取消</option></select></label>
+      <button class="btn primary" id="c-add">新增</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="c-seed">由分析結論產生待辦</button>
+      <button class="btn" id="c-dl">下載待辦（JSON）</button>
+      <label>還原待辦（JSON）<input type="file" id="c-restore" accept=".json"></label>
+      <button class="btn" id="c-csv">匯出待辦 CSV</button>
+    </div>
+    <div class="tbl tall" id="c-table"></div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+<script src="config.local.js" onerror="void 0"></script>
+<script src="app.js"></script>
 </body>
 </html>

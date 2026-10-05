@@ -40,27 +40,31 @@ python rma_engine.py "0820-0921 AIO data.xlsx" 輸出資料夾 --start 2026-08-0
 
 也可以在自己電腦打包：雙擊 `build_exe.bat`，完成後在 `dist/` 資料夾。
 
-## 網頁版：任何裝置開瀏覽器就能用
+## 網頁版：任何裝置開瀏覽器就能用（Vercel／GitHub Pages）
 
-`web_app.py` 是同樣七個模組的網頁版（Streamlit），部署到 Streamlit Community Cloud 之後，電腦、手機輸入網址就能用，不用裝任何東西。
+`index.html` + `app.js` + `worker.js` + `web_glue.py` 是純靜態的網頁版：用 Pyodide 把 Python 搬進瀏覽器，
+`rma_engine.py` 直接在使用者的瀏覽器裡執行，**AIO 檔案不會上傳到任何伺服器**。所以只要能放靜態檔案的地方都能架：Vercel、GitHub Pages、Netlify 都可以。
 
-**部署（一次就好，約 5 分鐘）**
+**部署到 Vercel（一次就好）**
 
-1. 到 https://share.streamlit.io 用 GitHub 帳號登入。
-2. **Create app** → **Deploy a public app from GitHub**。
-3. Repository 選 `sandyliu3056/RMA`，Branch 選要部署的分支，Main file path 填 `web_app.py`。
-4. 按 **Deploy**。第一次要等它安裝套件（`requirements.txt`、`packages.txt` 裡的中文字型）。
-5. 完成後會給你一個 `https://xxxx.streamlit.app` 網址。
+1. 到 https://vercel.com 用 GitHub 帳號登入 → **Add New → Project** → 選 `sandyliu3056/RMA` → **Import**。
+2. Framework Preset 選 **Other**，Build Command 留空，Output Directory 留空（根目錄就是網站），按 **Deploy**。
+3. 完成後會給你 `https://rma-xxxx.vercel.app`，之後每次推到 GitHub 會自動更新。
+4. 想限制只有自己能看：Project → Settings → **Deployment Protection** 開啟（需要 Vercel 帳號登入才能開）。
 
-**只讓自己看**：App 設定 → **Sharing** → 把 *Who can view this app* 改成只有你的 email。AIO 檔案含客戶資料，建議一定要設。
+GitHub Pages 也一樣能用：同一份檔案已經由 `.github/workflows/static.yml` 發布到 https://sandyliu3056.github.io/RMA/ 。
 
-**本機試跑**：`streamlit run web_app.py`，瀏覽器會自動開 http://localhost:8501。
+**第一次開網頁**會下載瀏覽器版 Python 和 pandas 等套件（約 30 MB，之後瀏覽器會快取），啟動約 20–60 秒；載入 AIO 檔分析約 1 分鐘。手機也能開，但建議用電腦。
+
+**本機試跑**：在這個資料夾執行 `python -m http.server 8000`，開 http://localhost:8000 。
 
 **和桌面版的差別**
 
-- 每次開網頁都要重新上傳 AIO 檔（雲端不保存你的檔案）。
-- 「跨單位協調」的待辦只存在當下的瀏覽器分頁；要保留請用「下載待辦」存成 JSON，下次「還原待辦」上傳回來。
-- Excel／PPT／圖都是按鈕下載，不是存到資料夾。
+- 每次開網頁都要重新選 AIO 檔（檔案只在瀏覽器裡，關掉就沒了）。
+- 「跨單位協調」的待辦存在那台電腦的瀏覽器裡；要帶到別台電腦，用「下載待辦」存成 JSON 再「還原待辦」。
+- Excel／PPT／圖都是按鈕下載。
+
+另外還有一個 Streamlit 版 `web_app.py`（需要能跑 Python 的主機，例如 Streamlit Community Cloud：`streamlit run web_app.py`），功能相同，給有伺服器的情況用。
 
 ## 資料規則
 

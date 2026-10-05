@@ -71,6 +71,12 @@ def load_aio(path, sheet=None):
     if sheet is None:
         sheet = "AllInOneData" if "AllInOneData" in xls.sheet_names else xls.sheet_names[0]
     raw = pd.read_excel(xls, sheet_name=sheet, header=None)
+    return clean_raw(raw)
+
+
+def clean_raw(raw):
+    """把「整張工作表、無標題」的 DataFrame 整理成乾淨資料：找標題列、轉型態、去空白。
+    load_aio 與網頁版（瀏覽器端用 SheetJS 讀檔後交給這裡）共用。"""
     first = raw.iloc[:, 0].astype(str).str.strip()
     hits = raw.index[first == "CaseID"]
     if len(hits) == 0:
