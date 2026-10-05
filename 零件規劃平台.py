@@ -114,7 +114,7 @@ def kpi_row(master, items):
         card.grid(row=0, column=i, padx=6, pady=6, sticky="nsew", ipadx=12, ipady=10)
         frame.columnconfigure(i, weight=1, uniform="kpi")       # 每張卡一樣寬
         tk.Label(card, text=title, bg=CARD, fg=MUTE, font=(FONT, 9)).pack(anchor="w", padx=10)
-        lab = tk.Label(card, text=value, bg=CARD, fg=NAVY, font=(FONT, 20, "bold"))
+        lab = tk.Label(card, text=value, bg=CARD, fg=NAVY, font=(FONT, 17, "bold"))
         lab.pack(anchor="w", padx=10, pady=(2, 0))
         labels[title] = lab
     return frame, labels
