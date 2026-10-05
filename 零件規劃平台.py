@@ -22,7 +22,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rma_engine as E
 
 APP_TITLE = "售後零件規劃平台"
-NAVY, ORANGE, BG, CARD, INK, MUTE = "#1F3F6E", "#E8862B", "#F3F6FA", "#FFFFFF", "#1E2430", "#5B6472"
+# 配色：深咖啡色標題列、金黃色分頁列、米色內容區（Brown Gold 主題）
+NAVY, ORANGE, BG, CARD, INK, MUTE = "#3B2A1A", "#E8862B", "#FBF6EC", "#FFFDF7", "#3B2A1A", "#7A6652"
+GOLD, TABBAR, LINE, STRIPE, HOVER, SELECT = "#F2B134", "#F5A623", "#D9CBB6", "#F6EFE3", "#FFE2A8", "#F8D98F"
+FONT = FONT
 ACTIONS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "協調待辦.json")
 UNITS = ["各國規劃人員", "供應商", "總部服務團隊", "倉庫／物流", "維修據點", "其他"]
 
@@ -61,6 +64,8 @@ class Grid(ttk.Frame):
         xs.grid(row=1, column=0, sticky="ew")
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
+        self.tree.tag_configure("odd", background=STRIPE)        # 斑馬紋，長表格比較好對行
+        self.tree.tag_configure("even", background=CARD)
         self.df = None
 
     def show(self, df, index=True, max_rows=2000):
@@ -80,8 +85,8 @@ class Grid(ttk.Frame):
             self.tree.heading(c, text=c)
             width = max(80, min(320, int(max([len(c)] + [len(fmt_cell(v)) for v in d[c].head(50)]) * 9 + 20)))
             self.tree.column(c, width=width, anchor="w", stretch=False)
-        for _, row in d.head(max_rows).iterrows():
-            self.tree.insert("", "end", values=[fmt_cell(v) for v in row])
+        for i, (_, row) in enumerate(d.head(max_rows).iterrows()):
+            self.tree.insert("", "end", values=[fmt_cell(v) for v in row], tags=("odd" if i % 2 else "even",))
 
     def export(self, default_name="表格.xlsx"):
         if self.df is None:
@@ -103,14 +108,23 @@ def kpi_row(master, items):
     frame = ttk.Frame(master)
     labels = {}
     for i, (title, value) in enumerate(items):
-        card = tk.Frame(frame, bg=CARD, bd=0, highlightthickness=1, highlightbackground="#D5DDE8")
-        card.grid(row=0, column=i, padx=6, pady=4, sticky="nsew", ipadx=10, ipady=6)
-        frame.columnconfigure(i, weight=1)
-        tk.Label(card, text=title, bg=CARD, fg=MUTE, font=("Microsoft JhengHei", 9)).pack(anchor="w", padx=8)
-        lab = tk.Label(card, text=value, bg=CARD, fg=NAVY, font=("Microsoft JhengHei", 16, "bold"))
-        lab.pack(anchor="w", padx=8)
+        card = tk.Frame(frame, bg=CARD, bd=0, highlightthickness=1, highlightbackground=LINE)
+        card.grid(row=0, column=i, padx=6, pady=6, sticky="nsew", ipadx=12, ipady=10)
+        frame.columnconfigure(i, weight=1, uniform="kpi")       # 每張卡一樣寬
+        tk.Label(card, text=title, bg=CARD, fg=MUTE, font=(FONT, 9)).pack(anchor="w", padx=10)
+        lab = tk.Label(card, text=value, bg=CARD, fg=NAVY, font=(FONT, 20, "bold"))
+        lab.pack(anchor="w", padx=10, pady=(2, 0))
         labels[title] = lab
     return frame, labels
+
+
+def section(master, text, **pack):
+    """分頁內的小節標題：橘色短槓＋粗體字。"""
+    row = ttk.Frame(master)
+    tk.Frame(row, bg=ORANGE, width=4, height=18).pack(side="left", padx=(0, 8))
+    ttk.Label(row, text=text, style="Section.TLabel").pack(side="left")
+    row.pack(anchor="w", padx=12, **(pack or {"pady": (8, 2)}))
+    return row
 
 
 # ----------------------------------------------------------------------------
@@ -127,13 +141,34 @@ class App(tk.Tk):
             style.theme_use("clam")
         except tk.TclError:
             pass
-        style.configure("TNotebook.Tab", font=("Microsoft JhengHei", 11, "bold"), padding=(14, 8))
-        style.configure("Treeview", font=("Microsoft JhengHei", 9), rowheight=24)
-        style.configure("Treeview.Heading", font=("Microsoft JhengHei", 9, "bold"))
-        style.configure("TLabel", font=("Microsoft JhengHei", 10))
-        style.configure("TButton", font=("Microsoft JhengHei", 10))
-        style.configure("Accent.TButton", font=("Microsoft JhengHei", 10, "bold"), foreground="white", background=ORANGE)
-        style.map("Accent.TButton", background=[("active", "#D0741F")])
+        # 底色與文字
+        style.configure(".", background=BG, foreground=INK, font=(FONT, 10), bordercolor=LINE)
+        style.configure("TFrame", background=BG)
+        style.configure("TLabel", background=BG, foreground=INK, font=(FONT, 10))
+        style.configure("Section.TLabel", font=(FONT, 11, "bold"), foreground=INK)
+        style.configure("TLabelframe", background=BG, bordercolor=LINE)
+        style.configure("TLabelframe.Label", background=BG, foreground=INK, font=(FONT, 10, "bold"))
+        # 分頁：金黃色分頁列，選到的那頁變米白
+        style.configure("TNotebook", background=TABBAR, borderwidth=0, tabmargins=(6, 6, 6, 0))
+        style.configure("TNotebook.Tab", font=(FONT, 10, "bold"), padding=(16, 8), background=GOLD, foreground=INK, borderwidth=0)
+        style.map("TNotebook.Tab", background=[("selected", BG), ("active", HOVER)], foreground=[("selected", INK)])
+        # 按鈕：一般為米白底咖啡邊，主要動作為咖啡底米白字
+        style.configure("TButton", font=(FONT, 10), padding=(12, 6), background=CARD, foreground=INK, bordercolor=LINE, relief="flat")
+        style.map("TButton", background=[("active", HOVER), ("pressed", SELECT)])
+        style.configure("Accent.TButton", font=(FONT, 10, "bold"), padding=(14, 6), foreground="white", background="#6B4E31", bordercolor="#6B4E31")
+        style.map("Accent.TButton", background=[("active", "#4F3A24"), ("pressed", NAVY)])
+        # 輸入框與下拉
+        style.configure("TEntry", fieldbackground=CARD, bordercolor=LINE, padding=4)
+        style.configure("TCombobox", fieldbackground=CARD, background=CARD, bordercolor=LINE, padding=3)
+        style.configure("TSpinbox", fieldbackground=CARD, bordercolor=LINE, padding=3)
+        # 表格：咖啡色表頭、淺色框線、金黃色選取列
+        style.configure("Treeview", font=(FONT, 9), rowheight=26, background=CARD, fieldbackground=CARD, foreground=INK, bordercolor=LINE)
+        style.configure("Treeview.Heading", font=(FONT, 9, "bold"), background="#6B4E31", foreground="white", relief="flat", padding=6)
+        style.map("Treeview.Heading", background=[("active", "#4F3A24")])
+        style.map("Treeview", background=[("selected", SELECT)], foreground=[("selected", INK)])
+        style.configure("TPanedwindow", background=BG)
+        style.configure("Vertical.TScrollbar", background=BG, troughcolor=STRIPE, bordercolor=LINE, arrowcolor=MUTE)
+        style.configure("Horizontal.TScrollbar", background=BG, troughcolor=STRIPE, bordercolor=LINE, arrowcolor=MUTE)
 
         self.raw = None
         self.data = None
@@ -142,21 +177,28 @@ class App(tk.Tk):
         self.chart_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_charts")
         self._photo = None
 
-        header = tk.Frame(self, bg=NAVY, height=56)
+        # 標題列：深咖啡底、金黃色標題，右側時鐘與資料狀態
+        header = tk.Frame(self, bg=NAVY)
         header.pack(fill="x")
-        tk.Label(header, text="售後零件規劃平台", bg=NAVY, fg="white", font=("Microsoft JhengHei", 16, "bold")).pack(side="left", padx=16, pady=10)
+        left = tk.Frame(header, bg=NAVY); left.pack(side="left", padx=18, pady=10)
+        tk.Label(left, text="售後零件規劃平台", bg=NAVY, fg=GOLD, font=(FONT, 18, "bold")).pack(anchor="w")
         self.status_var = tk.StringVar(value="尚未載入資料")
-        tk.Label(header, textvariable=self.status_var, bg=NAVY, fg="#DDE6F3", font=("Microsoft JhengHei", 10)).pack(side="right", padx=16)
+        tk.Label(left, textvariable=self.status_var, bg=NAVY, fg="#D9C7A8", font=(FONT, 9)).pack(anchor="w")
+        right = tk.Frame(header, bg=NAVY); right.pack(side="right", padx=18, pady=8)
+        self.clock_var = tk.StringVar(); self.date_var = tk.StringVar()
+        tk.Label(right, textvariable=self.clock_var, bg=NAVY, fg=GOLD, font=("Consolas", 20, "bold")).pack(anchor="e")
+        tk.Label(right, textvariable=self.date_var, bg=NAVY, fg="#D9C7A8", font=(FONT, 9)).pack(anchor="e")
+        self._tick()
 
         self.nb = ttk.Notebook(self)
-        self.nb.pack(fill="both", expand=True, padx=8, pady=8)
-        self.tab_source = ttk.Frame(self.nb); self.nb.add(self.tab_source, text="資料來源")
-        self.tab_demand = ttk.Frame(self.nb); self.nb.add(self.tab_demand, text="需求規劃")
-        self.tab_stock = ttk.Frame(self.nb); self.nb.add(self.tab_stock, text="庫存與缺料")
-        self.tab_po = ttk.Frame(self.nb); self.nb.add(self.tab_po, text="訂單與交期")
-        self.tab_ship = ttk.Frame(self.nb); self.nb.add(self.tab_ship, text="出貨與到貨")
-        self.tab_report = ttk.Frame(self.nb); self.nb.add(self.tab_report, text="報表與分析")
-        self.tab_coord = ttk.Frame(self.nb); self.nb.add(self.tab_coord, text="跨單位協調")
+        self.nb.pack(fill="both", expand=True)
+        self.tab_source = ttk.Frame(self.nb); self.nb.add(self.tab_source, text="📂 資料來源")
+        self.tab_demand = ttk.Frame(self.nb); self.nb.add(self.tab_demand, text="📈 需求規劃")
+        self.tab_stock = ttk.Frame(self.nb); self.nb.add(self.tab_stock, text="📦 庫存與缺料")
+        self.tab_po = ttk.Frame(self.nb); self.nb.add(self.tab_po, text="🧾 訂單與交期")
+        self.tab_ship = ttk.Frame(self.nb); self.nb.add(self.tab_ship, text="🚚 出貨與到貨")
+        self.tab_report = ttk.Frame(self.nb); self.nb.add(self.tab_report, text="📊 報表與分析")
+        self.tab_coord = ttk.Frame(self.nb); self.nb.add(self.tab_coord, text="🤝 跨單位協調")
         self._build_source()
         self._build_demand()
         self._build_stock()
@@ -164,6 +206,12 @@ class App(tk.Tk):
         self._build_ship()
         self._build_report()
         self._build_coord()
+
+    def _tick(self):
+        now = dt.datetime.now()
+        self.clock_var.set(now.strftime("%H:%M"))
+        self.date_var.set(now.strftime("%Y/%m/%d %a"))
+        self.after(30_000, self._tick)
 
     # ------------------------------------------------------------------ 資料來源
     def _build_source(self):
@@ -180,7 +228,7 @@ class App(tk.Tk):
         self.kpi_frame, self.kpi_labels = kpi_row(f, [("案件數", "－"), ("在途", "－"), ("缺料（Awaiting Spares）", "－"),
                                                      ("零件未使用率", "－"), ("SLA 達成率", "－"), ("保固 30 天內到期在途", "－")])
         self.kpi_frame.pack(fill="x", padx=8)
-        self.log = tk.Text(f, height=18, font=("Consolas", 10), bg="#FBFCFE")
+        self.log = tk.Text(f, height=18, font=("Consolas", 10), bg=CARD, relief="flat", highlightthickness=1, highlightbackground=LINE)
         self.log.pack(fill="both", expand=True, padx=12, pady=8)
         self._log("1. 選擇 AIO 匯出檔（.xlsx，工作表 AllInOneData）\n2. 按「載入並分析」，約 10–30 秒\n3. 到各分頁查看，或在「報表與分析」匯出 Excel／PPT")
 
@@ -254,10 +302,10 @@ class App(tk.Tk):
         ttk.Button(bar, text="重新計算", command=self._refresh_demand).pack(side="left", padx=8)
         ttk.Button(bar, text="匯出上表", command=lambda: self.demand_grid.export("週申請零件量.xlsx")).pack(side="right")
         ttk.Button(bar, text="匯出料號表", command=lambda: self.parts_grid.export("Top料號.xlsx")).pack(side="right", padx=6)
-        ttk.Label(f, text="每週申請零件顆數（完整週）與未來需求推估", font=("Microsoft JhengHei", 11, "bold")).pack(anchor="w", padx=12)
+        section(f, "每週申請零件顆數（完整週）與未來需求推估")
         self.demand_grid = Grid(f, height=8); self.demand_grid.pack(fill="both", expand=False, padx=12, pady=4)
         self.forecast_grid = Grid(f, height=7); self.forecast_grid.pack(fill="both", expand=False, padx=12, pady=4)
-        ttk.Label(f, text="申請次數最多的料號（Top 30）：申請顆數、未使用率、目前待供貨顆數", font=("Microsoft JhengHei", 11, "bold")).pack(anchor="w", padx=12, pady=(8, 0))
+        section(f, "申請次數最多的料號（Top 30）：申請顆數、未使用率、目前待供貨顆數", pady=(8, 0))
         self.parts_grid = Grid(f, height=10); self.parts_grid.pack(fill="both", expand=True, padx=12, pady=4)
 
     def _refresh_demand(self):
@@ -281,9 +329,9 @@ class App(tk.Tk):
         ttk.Button(bar, text="重新整理", command=self._refresh_stock).pack(side="left", padx=8)
         ttk.Button(bar, text="匯出催料清單", command=lambda: self.short_case_grid.export("催料清單.xlsx")).pack(side="right")
         ttk.Button(bar, text="匯出料號清單", command=lambda: self.short_part_grid.export("缺料料號.xlsx")).pack(side="right", padx=6)
-        ttk.Label(f, text="缺料料號（Awaiting Spares 案件中待供貨的料號）", font=("Microsoft JhengHei", 11, "bold")).pack(anchor="w", padx=12)
+        section(f, "缺料料號（Awaiting Spares 案件中待供貨的料號）")
         self.short_part_grid = Grid(f, height=9); self.short_part_grid.pack(fill="both", expand=False, padx=12, pady=4)
-        ttk.Label(f, text="催料案件清單", font=("Microsoft JhengHei", 11, "bold")).pack(anchor="w", padx=12, pady=(8, 0))
+        section(f, "催料案件清單", pady=(8, 0))
         self.short_case_grid = Grid(f, height=10); self.short_case_grid.pack(fill="both", expand=True, padx=12, pady=4)
 
     def _refresh_stock(self):
@@ -309,9 +357,9 @@ class App(tk.Tk):
         ttk.Button(bar, text="匯出逾期清單", command=lambda: self.po_late_grid.export("逾期訂單.xlsx")).pack(side="right")
         self.po_kpi_frame, self.po_kpi = kpi_row(f, [("訂單筆數", "－"), ("已到貨", "－"), ("準交率", "－"), ("平均交期（天）", "－"), ("未到貨且已逾期", "－")])
         self.po_kpi_frame.pack(fill="x", padx=8)
-        ttk.Label(f, text="供應商準交率", font=("Microsoft JhengHei", 11, "bold")).pack(anchor="w", padx=12)
+        section(f, "供應商準交率")
         self.po_sup_grid = Grid(f, height=7); self.po_sup_grid.pack(fill="both", expand=False, padx=12, pady=4)
-        ttk.Label(f, text="逾期與未交訂單", font=("Microsoft JhengHei", 11, "bold")).pack(anchor="w", padx=12, pady=(8, 0))
+        section(f, "逾期與未交訂單", pady=(8, 0))
         self.po_late_grid = Grid(f, height=10); self.po_late_grid.pack(fill="both", expand=True, padx=12, pady=4)
 
     def _po_template(self):
@@ -373,11 +421,11 @@ class App(tk.Tk):
         row = ttk.Frame(f); row.pack(fill="both", expand=False, padx=12)
         left = ttk.Frame(row); left.pack(side="left", fill="both", expand=True)
         right = ttk.Frame(row); right.pack(side="left", fill="both", expand=True, padx=(8, 0))
-        ttk.Label(left, text="待出貨積壓（依據點）", font=("Microsoft JhengHei", 11, "bold")).pack(anchor="w")
+        section(left, "待出貨積壓（依據點）")
         self.backlog_grid = Grid(left, height=9); self.backlog_grid.pack(fill="both", expand=True, pady=4)
-        ttk.Label(right, text="零件運送中／已配貨（依國家，在途案件）", font=("Microsoft JhengHei", 11, "bold")).pack(anchor="w")
+        section(right, "零件運送中／已配貨（依國家，在途案件）")
         self.transit_grid = Grid(right, height=9); self.transit_grid.pack(fill="both", expand=True, pady=4)
-        ttk.Label(f, text="在途且保固即將到期（含建案時保固內、現已過期）", font=("Microsoft JhengHei", 11, "bold")).pack(anchor="w", padx=12, pady=(8, 0))
+        section(f, "在途且保固即將到期（含建案時保固內、現已過期）", pady=(8, 0))
         self.exp_grid = Grid(f, height=10); self.exp_grid.pack(fill="both", expand=True, padx=12, pady=4)
 
     def _refresh_ship(self):
@@ -399,8 +447,8 @@ class App(tk.Tk):
     def _build_report(self):
         f = self.tab_report
         left = ttk.Frame(f, width=300); left.pack(side="left", fill="y", padx=(12, 6), pady=8)
-        ttk.Label(left, text="分析項目", font=("Microsoft JhengHei", 11, "bold")).pack(anchor="w")
-        self.an_list = tk.Listbox(left, width=34, height=14, font=("Microsoft JhengHei", 10), exportselection=False)
+        section(left, "分析項目")
+        self.an_list = tk.Listbox(left, width=34, height=14, font=(FONT, 10), exportselection=False)
         self.an_list.pack(fill="y", pady=4)
         self.an_list.bind("<<ListboxSelect>>", lambda e: self._show_analysis())
         ttk.Button(left, text="匯出 Excel 表格", command=self._export_excel).pack(fill="x", pady=2)
@@ -408,14 +456,14 @@ class App(tk.Tk):
         ttk.Button(left, text="匯出全部圖 PNG", command=self._export_charts).pack(fill="x", pady=2)
         ttk.Button(left, text="全部匯出到資料夾", style="Accent.TButton", command=self._export_all).pack(fill="x", pady=(8, 2))
         right = ttk.Frame(f); right.pack(side="left", fill="both", expand=True, padx=(6, 12), pady=8)
-        self.an_title = ttk.Label(right, text="請先載入資料，再從左側選一項分析", font=("Microsoft JhengHei", 13, "bold"), foreground=NAVY)
+        self.an_title = ttk.Label(right, text="請先載入資料，再從左側選一項分析", font=(FONT, 13, "bold"), foreground="#6B4E31")
         self.an_title.pack(anchor="w")
         body = ttk.Panedwindow(right, orient="horizontal"); body.pack(fill="both", expand=True)
         textf = ttk.Frame(body); body.add(textf, weight=1)
-        self.an_text = tk.Text(textf, wrap="word", font=("Microsoft JhengHei", 10), width=52, bg="#FBFCFE")
+        self.an_text = tk.Text(textf, wrap="word", font=(FONT, 10), width=52, bg=CARD, relief="flat", highlightthickness=1, highlightbackground=LINE)
         self.an_text.pack(fill="both", expand=True)
         chartf = ttk.Frame(body); body.add(chartf, weight=2)
-        self.chart_label = tk.Label(chartf, bg="white", text="（圖表）")
+        self.chart_label = tk.Label(chartf, bg=CARD, fg=MUTE, text="（圖表）", highlightthickness=1, highlightbackground=LINE)
         self.chart_label.pack(fill="both", expand=True)
         tabf = ttk.Frame(right); tabf.pack(fill="both", expand=True, pady=(6, 0))
         bar = ttk.Frame(tabf); bar.pack(fill="x")
@@ -559,7 +607,10 @@ class App(tk.Tk):
         for a in sorted(self.actions, key=lambda x: (x.get("狀態") == "已完成", x.get("到期日", ""))):
             tag = "late" if a.get("狀態") in ("進行中", "待回覆") and a.get("到期日", "9999") < dt.date.today().isoformat() else ""
             self.coord_tree.insert("", "end", values=(a["id"], a["對象單位"], a["議題"], a["負責人"], a["到期日"], a["狀態"], a["建立日"]), tags=(tag,))
+            if len(self.coord_tree.get_children()) % 2 == 0 and not tag:
+                self.coord_tree.item(self.coord_tree.get_children()[-1], tags=("odd",))
         self.coord_tree.tag_configure("late", foreground="#B5544C")
+        self.coord_tree.tag_configure("odd", background=STRIPE)
 
     def _coord_add(self, unit=None, topic=None, owner="", due=None, status="進行中"):
         topic = topic if topic is not None else self.c_topic.get().strip()
