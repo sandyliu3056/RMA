@@ -40,6 +40,28 @@ python rma_engine.py "0820-0921 AIO data.xlsx" 輸出資料夾 --start 2026-08-0
 
 也可以在自己電腦打包：雙擊 `build_exe.bat`，完成後在 `dist/` 資料夾。
 
+## 網頁版：任何裝置開瀏覽器就能用
+
+`web_app.py` 是同樣七個模組的網頁版（Streamlit），部署到 Streamlit Community Cloud 之後，電腦、手機輸入網址就能用，不用裝任何東西。
+
+**部署（一次就好，約 5 分鐘）**
+
+1. 到 https://share.streamlit.io 用 GitHub 帳號登入。
+2. **Create app** → **Deploy a public app from GitHub**。
+3. Repository 選 `sandyliu3056/RMA`，Branch 選要部署的分支，Main file path 填 `web_app.py`。
+4. 按 **Deploy**。第一次要等它安裝套件（`requirements.txt`、`packages.txt` 裡的中文字型）。
+5. 完成後會給你一個 `https://xxxx.streamlit.app` 網址。
+
+**只讓自己看**：App 設定 → **Sharing** → 把 *Who can view this app* 改成只有你的 email。AIO 檔案含客戶資料，建議一定要設。
+
+**本機試跑**：`streamlit run web_app.py`，瀏覽器會自動開 http://localhost:8501。
+
+**和桌面版的差別**
+
+- 每次開網頁都要重新上傳 AIO 檔（雲端不保存你的檔案）。
+- 「跨單位協調」的待辦只存在當下的瀏覽器分頁；要保留請用「下載待辦」存成 JSON，下次「還原待辦」上傳回來。
+- Excel／PPT／圖都是按鈕下載，不是存到資料夾。
+
 ## 資料規則
 
 - 讀取工作表 `AllInOneData`（沒有時取第一張），自動找 `CaseID` 所在列當標題，略過中文說明列。
