@@ -112,6 +112,7 @@ WEB_EN = {
     "瀏覽器版（資料不離開這台電腦）": "Browser edition (your data never leaves this computer)",
     "啟動中…": "Starting…",
     "請輸入分析起日": "Enter the analysis start date",
+    "粗體列是狀態分組，底下是歸入該組的 AIO 原始狀態。": "Bold rows are the status groups; the rows under each are the AIO statuses that belong to it.",
     "圖表套件載入中…": "Loading chart packages…",
     "圖表套件載入失敗，需要時會再試": "Chart packages failed to load; will retry when needed",
     # ── 步驟進度
@@ -221,13 +222,14 @@ def _flat(df):
     return df
 
 
-def df_json(df, index=True, pct=False, highlight=None, max_rows=2000):
+def df_json(df, index=True, pct=False, highlight=None, max_rows=2000, row_class=None):
     """DataFrame → 畫面用 JSON。
     columns：顯示用欄名（已翻譯）  defs：各欄名詞定義（沒有就空字串）
     rows：已格式化成文字的儲存格  numeric：是否靠右對齊  warn：highlight(列) 為 True 的列（紅字）
+    cls：row_class(列) 回傳的 CSS 類別（例如 "grp" 粗體分組列、"sub" 縮排子列）
     pct：整張表的資料欄都以百分比顯示（索引欄除外）。"""
     if df is None or len(df) == 0:
-        return {"columns": [], "defs": [], "rows": [], "numeric": [], "warn": [], "total": 0}
+        return {"columns": [], "defs": [], "rows": [], "numeric": [], "warn": [], "cls": [], "total": 0}
     d = df.reset_index() if index else df.reset_index(drop=True)
     d = _flat(d).rename(columns={"index": "項目"})
     raw_cols = [str(c) for c in d.columns]
@@ -239,20 +241,25 @@ def df_json(df, index=True, pct=False, highlight=None, max_rows=2000):
         seen[c] = seen.get(c, 0) + 1
         ids.append(c if seen[c] == 1 else f"{c} ({seen[c]})")
     defs = [define(r) for r in raw_cols]
-    rows, warn = [], []
+    rows, warn, cls = [], [], []
     for r, rec in enumerate(shown.itertuples(index=False, name=None)):
         if r >= max_rows:
             break
         rows.append([fmt_cell(v, kinds[i]) for i, v in enumerate(rec)])
-        w = False
+        w, c = False, ""
         if highlight is not None:
             try:
                 w = bool(highlight(d.iloc[r]))
             except Exception:
                 w = False
-        warn.append(w)
+        if row_class is not None:
+            try:
+                c = str(row_class(d.iloc[r]) or "")
+            except Exception:
+                c = ""
+        warn.append(w); cls.append(c)
     numeric = [k in ("pct", "int", "num") for k in kinds]
-    return {"columns": ids, "defs": defs, "rows": rows, "numeric": numeric, "warn": warn, "total": int(len(shown))}
+    return {"columns": ids, "defs": defs, "rows": rows, "numeric": numeric, "warn": warn, "cls": cls, "total": int(len(shown))}
 
 
 def _xlsx_raw(df):
@@ -359,10 +366,25 @@ def summary():
                  kpi("SLA 達成率", f"{_f(k22['整體達成率']):.0%}"),
                  kpi("保固 30 天內到期在途", f"{int(k52['30天內到期件數']):,}")],
         "status_title": tr("各狀態在途件數"),
-        "status_table": df_json(sc),
+        "status_table": status_breakdown(d),
+        "status_hint": tr("粗體列是狀態分組，底下是歸入該組的 AIO 原始狀態。"),
         "status_chart": {"labels": [T(str(i)) for i in sc.index], "values": [int(v) for v in sc["件數"]]},
         "analyses": [[a.key, E.title_part(a.title, -1)] for a in rep.analyses.values()],
     }
+
+
+def status_breakdown(d):
+    """在途案件：每個狀態分組一列（粗體、合計），底下列出歸入該組的 AIO 原始狀態與件數。"""
+    o = d[d["在途"]]
+    g = o.groupby(["狀態分類", "Status"], observed=True).size()
+    totals = g.groupby(level=0).sum().sort_values(ascending=False)
+    rows = []
+    for grp, total in totals.items():
+        rows.append({"狀態分類": grp, "Status": "", "件數": int(total), "_cls": "grp"})
+        for st, n in g.loc[grp].sort_values(ascending=False).items():
+            rows.append({"狀態分類": "", "Status": str(st), "件數": int(n), "_cls": "sub"})
+    df = pd.DataFrame(rows, columns=["狀態分類", "Status", "件數", "_cls"])
+    return df_json(df.drop(columns="_cls"), index=False, row_class=lambda r: df.loc[r.name, "_cls"])
 
 
 # ----------------------------------------------------------------------------

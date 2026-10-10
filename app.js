@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10l";
+  const V = "2026-10-10m";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -261,7 +261,8 @@
     }).join("") + "</tr></thead><tbody>";
     for (let r = 0; r < n; r++) {
       const row = tj.rows[r];
-      h += `<tr${tj.warn && tj.warn[r] ? ' class="warn"' : ""}>` + row.map((v, i) => `<td class="${tj.numeric[i] ? "num" : ""}">${esc(v)}</td>`).join("") + "</tr>";
+      const cls = ((tj.warn && tj.warn[r]) ? "warn " : "") + ((tj.cls && tj.cls[r]) || "");
+      h += `<tr${cls.trim() ? ` class="${esc(cls.trim())}"` : ""}>` + row.map((v, i) => `<td class="${tj.numeric[i] ? "num" : ""}">${esc(v)}</td>`).join("") + "</tr>";
     }
     h += "</tbody></table>";
     const total = tj.total || tj.rows.length;
@@ -371,6 +372,7 @@
     $("src-caption").textContent = s.caption;
     $("src-period").textContent = s.period;
     $("src-status-title").textContent = s.status_title;
+    $("src-status-hint").textContent = s.status_hint || "";
     renderTable($("src-status-tbl"), s.status_table);
     renderBars($("src-status-chart"), s.status_chart.labels, s.status_chart.values);
     $("src-status").style.display = "block";
