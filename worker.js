@@ -150,7 +150,24 @@ function readSheet(buf, preferName) {
 
 // 這些指令只需要第一段；其他（圖表、匯出、表格的 Excel）要等第二段
 const LIGHT = new Set(["boot", "ui_lang", "load", "set_lang", "summary", "conclusions", "ui", "glossary",
-                       "tab_demand", "tab_stock", "tab_ship", "analysis", "analysis_table", "po", "po_result"]);
+                       "tab_demand", "tab_stock", "tab_ship", "analysis", "analysis_table", "po", "po_result",
+                       "table_data", "po_template_table"]);
+
+/* 表格匯出：Python 給純資料，這裡用 SheetJS 寫成 xlsx（不需要 openpyxl，不必等背景套件） */
+function sheetB64(td) {
+  const aoa = [td.columns, ...td.rows.map((r) => r.map((v, i) => (td.kinds[i] === "date" && v) ? new Date(v + "T00:00:00") : v))];
+  const ws = XLSX.utils.aoa_to_sheet(aoa, { cellDates: true });
+  const range = XLSX.utils.decode_range(ws["!ref"]);
+  for (let c = 0; c <= range.e.c; c++) {
+    const k = td.kinds[c];
+    if (k !== "pct" && k !== "date") continue;
+    for (let r = 1; r <= range.e.r; r++) { const cell = ws[XLSX.utils.encode_cell({ r, c })]; if (cell) cell.z = k === "pct" ? "0.0%" : "yyyy-mm-dd"; }
+  }
+  ws["!cols"] = td.columns.map((h, i) => ({ wch: Math.min(60, Math.max(10, Math.max(String(h).length, ...td.rows.slice(0, 200).map((r) => String(r[i] ?? "").length)) + 2)) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  return XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+}
 
 self.onmessage = async (ev) => {
   const { id, cmd, args } = ev.data;
@@ -175,6 +192,11 @@ self.onmessage = async (ev) => {
       try { result = JSON.parse(glue.load(pyRows, args.start || null, onProgress)); step("load", "parts", "done"); }
       catch (e) { step("load", "current", "fail"); throw e; }
       finally { pyRows.destroy(); }
+    } else if (cmd === "table_xlsx" || cmd === "po_template") {
+      let key = args && args.key, name = null;
+      if (cmd === "po_template") { const t = JSON.parse(glue.dispatch("po_template_table", "{}", (m) => log(m))); key = t.key; name = t.name; }
+      const td = JSON.parse(glue.dispatch("table_data", JSON.stringify({ key }), (m) => log(m)));
+      result = { data: td.columns.length ? sheetB64(td) : null, name: name || td.name };
     } else if (cmd === "po") {
       const rows = readSheet(args.buffer, null);
       const pyRows = pyodide.toPy(rows);

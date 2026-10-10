@@ -125,6 +125,9 @@ WEB_EN = {
     "每一列是一個狀態分組，色塊是歸入該組的 AIO 原始狀態（太窄放不下名字的，滑鼠停上去看）；右邊是該組合計。": "Each row is a status group; the coloured blocks are the AIO statuses in that group (hover over the ones too narrow to label). The number on the right is the group total.",
     "圖表套件載入中…": "Loading chart packages…",
     "圖表套件載入失敗，需要時會再試": "Chart packages failed to load; will retry when needed",
+    "等待套件載入…": "Waiting for packages…",
+    "圖表與匯出套件下載失敗，請檢查網路後再試一次。": "The chart and export packages could not be downloaded. Check your connection and try again.",
+    "圖表與匯出套件還在背景載入，載完會自動開始。": "Chart and export packages are still loading in the background; this will start automatically when they are ready.",
     # ── 步驟進度
     "啟動": "Startup",
     "完成": "Done",
@@ -288,18 +291,60 @@ def xlsx_b64(df, index=True):
     return _xlsx_raw(tr_df(d))
 
 
-def remember(key, df, index=True, name="table.xlsx"):
-    """記住分頁上的表格，按「匯出」時再轉成 Excel（匯出需要 openpyxl，不讓分頁等它）。回傳查表用的鍵。"""
-    STATE["tables"][key] = (df, index, name)
+def remember(key, df, index=True, name="table.xlsx", pct=False):
+    """記住分頁上的表格，按「匯出」時再轉成 Excel。回傳查表用的鍵。"""
+    STATE["tables"][key] = (df, index, name, pct)
     return key
 
 
-def table_xlsx(key):
-    """把 remember() 記住的表格轉成 Excel。回傳 {"data": base64 或 None, "name": 檔名}。"""
+def _table(key):
     if key not in STATE["tables"]:
         raise ValueError(L(f"沒有這個表格：{key}", f"No such table: {key}"))
-    df, index, name = STATE["tables"][key]
+    return STATE["tables"][key]
+
+
+def table_xlsx(key):
+    """把 remember() 記住的表格用 openpyxl 轉成 Excel（備用；瀏覽器版改用 table_data＋SheetJS）。"""
+    df, index, name, _pct = _table(key)
     return {"data": xlsx_b64(df, index), "name": name}
+
+
+def table_data(key):
+    """remember() 記住的表格 → 純資料（欄名、每欄型態、每格原始值），交給 worker 用 SheetJS 寫成 Excel。
+    不需要 openpyxl，所以不必等背景套件。kinds：pct／int／num／bool／date／text。"""
+    df, index, name, pct = _table(key)
+    if df is None or len(df) == 0:
+        return {"name": name, "columns": [], "kinds": [], "rows": []}
+    d = df.reset_index() if index else df.reset_index(drop=True)
+    d = _flat(d).rename(columns={"index": "項目"})
+    raw_cols = [str(c) for c in d.columns]
+    n_idx = d.shape[1] - df.shape[1]
+    kinds = [col_kind(c, d.iloc[:, i], pct and i >= n_idx) for i, c in enumerate(raw_cols)]
+    for i in range(len(raw_cols)):
+        if pd.api.types.is_datetime64_any_dtype(d.iloc[:, i]):
+            kinds[i] = "date"
+    shown = tr_df(d)
+    rows = []
+    for rec in shown.itertuples(index=False, name=None):
+        out = []
+        for i, v in enumerate(rec):
+            try:
+                if v is None or pd.isna(v):
+                    out.append(None); continue
+            except (TypeError, ValueError):
+                pass
+            if isinstance(v, (pd.Timestamp, dt.datetime, dt.date)):
+                out.append(v.strftime("%Y-%m-%d"))
+            elif isinstance(v, (bool, np.bool_)):
+                out.append(L("是", "Yes") if v else L("否", "No"))
+            elif isinstance(v, (int, np.integer)):
+                out.append(int(v))
+            elif isinstance(v, (float, np.floating)):
+                out.append(float(v))
+            else:
+                out.append(str(v))
+        rows.append(out)
+    return {"name": name, "columns": [str(c) for c in shown.columns], "kinds": kinds, "rows": rows}
 
 
 def kv(n, share=None, digits=0):
@@ -532,7 +577,7 @@ def analysis_table(key, name):
     df = a.tables.get(name)
     # 整張表都是比例的（例如「占比」「組成」）全部以百分比顯示
     whole_pct = ("占比)" in name) or name.endswith("_占比") or ("組成" in name)
-    return {"table": df_json(df, pct=whole_pct), "x": remember(f"analysis.{key}.{name}", df, True, f"{key}_{T(name)}.xlsx")}
+    return {"table": df_json(df, pct=whole_pct), "x": remember(f"analysis.{key}.{name}", df, True, f"{key}_{T(name)}.xlsx", pct=whole_pct)}
 
 
 def conclusions():
@@ -578,6 +623,15 @@ def export(kind, progress=print):
 # ----------------------------------------------------------------------------
 # 訂單與交期（匯入訂單檔）
 # ----------------------------------------------------------------------------
+def po_template_table():
+    """訂單範本：記住表格並回傳鍵，worker 再用 table_data＋SheetJS 產生檔案。"""
+    tmpl = pd.DataFrame([
+        ["PO-2026-0001", "KP.04501.017", T("供應商A"), 50, "2026-09-10", "2026-09-12", "2026-09-11", "Thailand"],
+        ["PO-2026-0002", "KT.CTE00.014", T("供應商B"), 20, "2026-09-12", "2026-09-20", "", "Indonesia"],
+    ], columns=[T(c) for c in PO_COLS])
+    return {"key": remember("po.template", tmpl, False, T("零件訂單範本.xlsx")), "name": T("零件訂單範本.xlsx")}
+
+
 def po_template():
     tmpl = pd.DataFrame([
         ["PO-2026-0001", "KP.04501.017", T("供應商A"), 50, "2026-09-10", "2026-09-12", "2026-09-11", "Thailand"],
@@ -653,7 +707,7 @@ def dispatch(cmd, args_json, progress=print):
     fns = {"summary": summary, "tab_demand": tab_demand, "tab_stock": tab_stock, "tab_ship": tab_ship,
            "analysis": analysis, "analysis_table": analysis_table, "conclusions": conclusions,
            "po_template": po_template, "po_result": po_result, "set_lang": set_lang, "ui": ui, "glossary": glossary,
-           "chart": chart, "table_xlsx": table_xlsx}
+           "chart": chart, "table_xlsx": table_xlsx, "table_data": table_data, "po_template_table": po_template_table}
     if cmd == "export":
         return json.dumps(export(args["kind"], progress), ensure_ascii=False)
     if cmd not in fns:

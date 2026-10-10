@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10q";
+  const V = "2026-10-10r";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -226,6 +226,7 @@
     const m = (e && e.message) ? e.message : String(e);
     if (/Failed to fetch|NetworkError when|importScripts|net::ERR_|Load failed/.test(m)) return t("下載瀏覽器版 Python 失敗，請檢查網路後重新整理頁面。");
     if (/out of memory|allocation failed|RangeError|Aborted\(/i.test(m)) return t("記憶體不足，請關閉其他分頁後重試。");
+    if (/loading-packages|Can't fetch|Couldn't load package|micropip/i.test(m)) return t("圖表與匯出套件下載失敗，請檢查網路後再試一次。");
     const lines = m.trim().split("\n");
     return lines[lines.length - 1].replace(/^[A-Za-z_.]*(Error|Exception):\s*/, "");
   }
@@ -550,7 +551,7 @@
             ${a.paragraph ? `<div class="h">${esc(a.labels.about)}</div><p>${esc(a.paragraph)}</p>` : ""}
             <p class="concl"><b>${esc(a.labels.takeaway)}</b>${esc(a.conclusion)}</p>
           </div>
-          <div id="r-chart"><div class="boot"><span class="spin"></span>${esc(t("畫圖中…"))}</div></div>
+          <div id="r-chart"><div class="boot"><span class="spin"></span>${esc(extrasState === "ready" ? t("畫圖中…") : t("等待套件載入…"))}</div></div>
         </div>
         <div class="row">
           <label class="inline"><span>${esc(t("表格："))}</span><select id="r-table">${opts}</select></label>
@@ -584,7 +585,9 @@
   }
   async function exportKind(btn, kind, mime) {
     if (!needData()) return;
-    busy(btn, true, t("產生中…"));
+    const waiting = extrasState !== "ready";
+    busy(btn, true, waiting ? t("等待套件載入…") : t("產生中…"));
+    if (waiting) toast(t("圖表與匯出套件還在背景載入，載完會自動開始。"), 6000);
     try { const r = await call("export", { kind }); downloadB64(r.data, r.name, mime); }
     catch (e) { toast(t("匯出失敗：") + friendly(e), 8000); } finally { busy(btn, false); }
   }
