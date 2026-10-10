@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10p";
+  const V = "2026-10-10q";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -288,9 +288,10 @@
     const max = Math.max(1, ...c.rows.map((r) => r.total));
     let h = `<div class="ch-title">${esc(c.title || "")}${c.unit ? ` <span class="ch-unit">(${esc(c.unit)})</span>` : ""}</div><div class="hstack">`;
     for (const r of c.rows) {
-      h += `<div class="hb-row"><span class="hb-lab" title="${esc(r.label)}">${esc(r.label)}</span><span class="hb-bar">` +
-        r.segs.map((sg, i) => { const w = sg.value / max * 100; return `<i style="width:${w}%;background:${SEG_COLORS[i % SEG_COLORS.length]}" title="${esc(sg.name)}：${sg.value.toLocaleString()}">${esc(sg.name)} ${sg.value.toLocaleString()}</i>`; }).join("") +
-        `</span><b>${r.total.toLocaleString()}</b></div>`;
+      // 一組一塊：標題列（分組名＋合計）、長條（色塊）、下方逐一列出每個原始狀態與件數（顏色對應色塊）
+      h += `<div class="hs-group"><div class="hs-head"><span class="hs-lab">${esc(r.label)}</span><b>${r.total.toLocaleString()}</b></div>` +
+        `<span class="hb-bar">` + r.segs.map((sg, i) => { const w = sg.value / max * 100; return `<i style="width:${w}%;background:${SEG_COLORS[i % SEG_COLORS.length]}" title="${esc(sg.name)}：${sg.value.toLocaleString()}">${esc(sg.name)} ${sg.value.toLocaleString()}</i>`; }).join("") + `</span>` +
+        `<div class="hs-keys">` + r.segs.map((sg, i) => `<span><i style="background:${SEG_COLORS[i % SEG_COLORS.length]}"></i>${esc(sg.name)} <b>${sg.value.toLocaleString()}</b></span>`).join("") + `</div></div>`;
     }
     h += `</div>` + (c.note ? `<div class="ch-note">${esc(c.note)}</div>` : "");
     el.innerHTML = h;
