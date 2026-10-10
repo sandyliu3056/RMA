@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10h";
+  const V = "2026-10-10i";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -186,7 +186,7 @@
     renderSteps(phase === "boot" ? bootPct : loadPct());
   }
   function setTruck(pct, moving) {
-    // 場景裡的小貨車：從倉庫門口（x=300）開到右邊（x=1430），位置＝進度（經過貨櫃與人物時在他們後面）
+    // 場景裡的小貨車：從倉庫門口（x=300）開到右邊（x=1430），位置＝進度（從貨櫃前面、人物後面經過）
     const tr = $("truck"); if (!tr) return;
     const x = 300 + 1130 * Math.max(0, Math.min(100, pct)) / 100;
     tr.style.transform = `translate(${x}px, 0)`;
