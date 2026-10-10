@@ -87,7 +87,10 @@ import web_glue
 /* 第二段：圖表與匯出需要的套件。失敗時下次需要會再試。 */
 function ensureExtras() {
   if (!extras) {
-    extras = loadExtras().catch((e) => { extras = null; log(M.extrasFail + ((e && e.message) || e)); throw e; });
+    self.postMessage({ type: "extras", state: "loading" });
+    extras = loadExtras()
+      .then(() => self.postMessage({ type: "extras", state: "ready" }))
+      .catch((e) => { extras = null; self.postMessage({ type: "extras", state: "failed" }); log(M.extrasFail + ((e && e.message) || e)); throw e; });
   }
   return extras;
 }
@@ -140,7 +143,8 @@ function readSheet(buf, preferName) {
 }
 
 // 這些指令只需要第一段；其他（圖表、匯出、表格的 Excel）要等第二段
-const LIGHT = new Set(["boot", "ui_lang", "load", "set_lang", "summary", "conclusions", "ui", "glossary"]);
+const LIGHT = new Set(["boot", "ui_lang", "load", "set_lang", "summary", "conclusions", "ui", "glossary",
+                       "tab_demand", "tab_stock", "tab_ship", "analysis", "analysis_table", "po", "po_result"]);
 
 self.onmessage = async (ev) => {
   const { id, cmd, args } = ev.data;
@@ -161,7 +165,6 @@ self.onmessage = async (ev) => {
       try { result = JSON.parse(glue.load(pyRows, args.start || null, (m) => log(m))); }
       finally { pyRows.destroy(); }
     } else if (cmd === "po") {
-      await ensureExtras();
       const rows = readSheet(args.buffer, null);
       const pyRows = pyodide.toPy(rows);
       try { result = JSON.parse(glue.po(pyRows)); }

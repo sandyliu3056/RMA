@@ -1084,15 +1084,17 @@ def demand_forecast(d, weeks_ahead=4, by="國家", recent_weeks=4):
 
 def top_parts(parts, n=30):
     """申請次數最多的料號：申請顆數、案件數、未使用率、缺料中顆數、主要國家。"""
-    g = parts.groupby("料號").agg(申請顆數=("CaseID", "size"), 案件數=("CaseID", "nunique"),
-                                已使用=("狀態碼", lambda s: (s == "C").sum()),
-                                未使用退回=("狀態碼", lambda s: (s == "U").sum()),
-                                零件DOA=("狀態碼", lambda s: (s == "D").sum()),
-                                待供貨=("狀態碼", lambda s: (s == "R").sum()),
-                                運送中=("狀態碼", lambda s: (s == "I").sum()))
+    # 向量化計算（逐群 lambda 在瀏覽器版會慢十幾秒）
+    code = parts["狀態碼"]
+    flags = pd.DataFrame({"已使用": code.eq("C"), "未使用退回": code.eq("U"), "零件DOA": code.eq("D"),
+                          "待供貨": code.eq("R"), "運送中": code.eq("I")}, index=parts.index)
+    g = parts.groupby("料號").agg(申請顆數=("CaseID", "size"), 案件數=("CaseID", "nunique"))
+    g = g.join(flags.groupby(parts["料號"]).sum().astype(int))
     g["未使用率"] = g["未使用退回"] / (g["已使用"] + g["未使用退回"]).replace(0, np.nan)
-    top_c = parts.groupby("料號")["國家"].agg(lambda s: s.value_counts().index[0])
-    g["主要國家"] = top_c
+    # 主要國家：該料號出現最多的國家（同數取先出現的）
+    cnt = parts.groupby(["料號", "國家"], sort=False).size().reset_index(name="n")
+    cnt = cnt.sort_values("n", ascending=False, kind="stable").drop_duplicates("料號")
+    g["主要國家"] = cnt.set_index("料號")["國家"]
     return g.sort_values("申請顆數", ascending=False).head(n)
 
 

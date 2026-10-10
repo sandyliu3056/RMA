@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10e";
+  const V = "2026-10-10f";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -53,6 +53,7 @@
     const tzo = $("tz-sel").selectedOptions[0];
     $("tzname").textContent = tzo ? tzo.textContent : "";
     if (!ready && bootPct > 0 && !$("boot-pill").classList.contains("fail")) showProgress(bootPct);
+    if (ready) showExtras();
   }
   function setT(el, key) { el.dataset.t = key; el.textContent = t(key); }
 
@@ -74,6 +75,7 @@
     const m = ev.data;
     if (m.type === "log") { log(m.msg); return; }
     if (m.type === "progress") { showProgress(m.pct); return; }
+    if (m.type === "extras") { extrasState = m.state; showExtras(); return; }
     if (m.type === "ready") { onReady(); return; }
     const p = pending.get(m.id);
     if (!p) return;
@@ -90,6 +92,14 @@
       $("load").textContent = t("準備中") + " " + bootPct + "%";
     }
   }
+  let extrasState = "";
+  function showExtras() {
+    // 第二段（圖表與匯出套件）的狀態：就緒前在膠囊顯示提示
+    if (!ready) return;
+    if (extrasState === "loading") { $("boot-text").textContent = t("就緒") + " · " + t("圖表套件載入中…"); $("boot-pill").title = ""; }
+    else if (extrasState === "failed") { setT($("boot-text"), "就緒"); $("boot-pill").title = t("圖表套件載入失敗，需要時會再試"); }
+    else { setT($("boot-text"), "就緒"); $("boot-pill").title = ""; }
+  }
   function bootFailed(e) {
     const msg = t("啟動失敗：") + friendly(e);
     $("boot-pill").classList.add("fail"); $("boot-pill").title = msg;
@@ -104,6 +114,7 @@
     setT($("boot-text"), "就緒");
     setT($("load"), "載入並分析");
     $("aio").disabled = false; $("load").disabled = false;
+    showExtras();
   }
   async function syncLang() {
     // 告訴 Python 目前語言並取得介面字串（啟動後、切換語言時）
@@ -240,7 +251,13 @@
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   }
   function needData() { if (!loaded) { toast(t("請先在「資料來源」載入 AIO 匯出檔")); return false; } return true; }
-  function dl(b64, name) { if (b64) downloadB64(b64, name, XLSX_MIME); else toast(t("（沒有資料）")); }
+  // 表格匯出：按下時才在 Python 端轉成 Excel（第一次可能要等圖表與匯出套件載完）
+  async function exportTable(btn, key) {
+    if (!key) { toast(t("（沒有資料）")); return; }
+    busy(btn, true, t("產生中…"));
+    try { const r = await call("table_xlsx", { key }); if (r.data) downloadB64(r.data, r.name, XLSX_MIME); else toast(t("（沒有資料）")); }
+    catch (e) { toast(t("匯出失敗：") + friendly(e), 8000); } finally { busy(btn, false); }
+  }
 
   // ------------------------------------------------------------ 標題列設定（縮放、字型、主題、時區）與時鐘
   const PREFS = { zoom: "100", font: "hand", theme: "brown", tz: "Asia/Taipei" };
@@ -341,8 +358,8 @@
   }
   $("d-run").addEventListener("click", refreshDemand);
   $("d-by").addEventListener("change", refreshDemand);
-  $("d-weekly-dl").addEventListener("click", () => demandData && dl(demandData.weekly_xlsx, demandData.weekly_name));
-  $("d-top-dl").addEventListener("click", () => demandData && dl(demandData.top_xlsx, demandData.top_name));
+  $("d-weekly-dl").addEventListener("click", (e) => demandData && exportTable(e.currentTarget, demandData.weekly_x));
+  $("d-top-dl").addEventListener("click", (e) => demandData && exportTable(e.currentTarget, demandData.top_x));
 
   // ------------------------------------------------------------ 庫存與缺料
   let stockData = null;
@@ -359,8 +376,8 @@
     } catch (e) { toast(friendly(e), 8000); } finally { busy($("s-run"), false); }
   }
   $("s-run").addEventListener("click", refreshStock);
-  $("s-parts-dl").addEventListener("click", () => stockData && dl(stockData.parts_xlsx, stockData.parts_name));
-  $("s-cases-dl").addEventListener("click", () => stockData && dl(stockData.cases_xlsx, stockData.cases_name));
+  $("s-parts-dl").addEventListener("click", (e) => stockData && exportTable(e.currentTarget, stockData.parts_x));
+  $("s-cases-dl").addEventListener("click", (e) => stockData && exportTable(e.currentTarget, stockData.cases_x));
 
   // ------------------------------------------------------------ 訂單與交期
   let poData = null;
@@ -386,7 +403,7 @@
     } catch (e) { toast(t("匯入失敗：") + friendly(e), 8000); }
     finally { $("po-file").value = ""; }
   });
-  $("po-late-dl").addEventListener("click", () => poData && dl(poData.late_xlsx, poData.late_name));
+  $("po-late-dl").addEventListener("click", (e) => poData && exportTable(e.currentTarget, poData.late_x));
 
   // ------------------------------------------------------------ 出貨與到貨
   let shipData = null;
@@ -407,8 +424,8 @@
     } catch (e) { toast(friendly(e), 8000); } finally { busy($("h-run"), false); }
   }
   $("h-run").addEventListener("click", refreshShip);
-  $("h-backlog-dl").addEventListener("click", () => shipData && dl(shipData.backlog_xlsx, shipData.backlog_name));
-  $("h-exp-dl").addEventListener("click", () => shipData && dl(shipData.expiring_xlsx, shipData.expiring_name));
+  $("h-backlog-dl").addEventListener("click", (e) => shipData && exportTable(e.currentTarget, shipData.backlog_x));
+  $("h-exp-dl").addEventListener("click", (e) => shipData && exportTable(e.currentTarget, shipData.expiring_x));
 
   // ------------------------------------------------------------ 報表與分析
   let currentKey = null, currentTable = null, showSeq = 0;
@@ -438,7 +455,7 @@
             ${a.paragraph ? `<div class="h">${esc(a.labels.about)}</div><p>${esc(a.paragraph)}</p>` : ""}
             <p class="concl"><b>${esc(a.labels.takeaway)}</b>${esc(a.conclusion)}</p>
           </div>
-          <div>${a.chart ? `<img src="data:image/png;base64,${a.chart}" alt="${esc(a.title)}">` : `<div class="caption">${esc(t("（這一項沒有圖）"))}</div>`}</div>
+          <div id="r-chart"><div class="boot"><span class="spin"></span>${esc(t("畫圖中…"))}</div></div>
         </div>
         <div class="row">
           <label class="inline"><span>${esc(t("表格："))}</span><select id="r-table">${opts}</select></label>
@@ -447,9 +464,20 @@
         </div>
         <div class="tbl" id="r-table-body"></div>`;
       $("r-table").onchange = () => showTable(key, $("r-table").value);
-      $("r-table-dl").onclick = () => { if (currentTable) dl(currentTable.xlsx, currentTable.name); };
+      $("r-table-dl").onclick = (e) => { if (currentTable) exportTable(e.currentTarget, currentTable.x); };
       if (a.tables.length) showTable(key, a.tables[0][0]);
+      showChart(key, a.title);
     } catch (e) { if (my === showSeq) $("r-body").innerHTML = `<div class="notice">${esc(t("無法顯示："))}${esc(friendly(e))}</div>`; }
+  }
+  async function showChart(key, title) {
+    // 圖另外取：文字與表格先出現，圖畫好再放上（第一次要等圖表套件載完）
+    const my = showSeq;
+    try {
+      const r = await call("chart", { key });
+      const el = $("r-chart");
+      if (my !== showSeq || !el) return;
+      el.innerHTML = r.chart ? `<img src="data:image/png;base64,${r.chart}" alt="${esc(title)}">` : `<div class="caption">${esc(t("（這一項沒有圖）"))}</div>`;
+    } catch (e) { const el = $("r-chart"); if (my === showSeq && el) el.innerHTML = `<div class="caption">${esc(t("無法顯示："))}${esc(friendly(e))}</div>`; }
   }
   async function showTable(key, name) {
     const my = showSeq;

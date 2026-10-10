@@ -26,7 +26,7 @@ import i18n
 from i18n import T, L, is_en, tr_df, define, bullet, list_sep
 import rma_engine as E
 
-STATE = {"rep": None, "data": None, "po": None, "charts": {}, "chart_dir": None}
+STATE = {"rep": None, "data": None, "po": None, "charts": {}, "chart_dir": None, "tables": {}}
 UNITS = ["各國規劃人員", "供應商", "總部服務團隊", "倉庫／物流", "維修據點", "其他"]
 STATUSES = ["進行中", "待回覆", "已完成", "取消"]
 PO_COLS = ["訂單號", "料號", "供應商", "數量", "下單日", "承諾交期", "實際到貨日", "目的國"]
@@ -112,6 +112,8 @@ WEB_EN = {
     "瀏覽器版（資料不離開這台電腦）": "Browser edition (your data never leaves this computer)",
     "啟動中…": "Starting…",
     "請輸入分析起日": "Enter the analysis start date",
+    "圖表套件載入中…": "Loading chart packages…",
+    "圖表套件載入失敗，需要時會再試": "Chart packages failed to load; will retry when needed",
     "準備中": "Starting",
     "就緒": "Ready",
     "啟動失敗": "Startup failed",
@@ -256,6 +258,20 @@ def xlsx_b64(df, index=True):
     return _xlsx_raw(tr_df(d))
 
 
+def remember(key, df, index=True, name="table.xlsx"):
+    """記住分頁上的表格，按「匯出」時再轉成 Excel（匯出需要 openpyxl，不讓分頁等它）。回傳查表用的鍵。"""
+    STATE["tables"][key] = (df, index, name)
+    return key
+
+
+def table_xlsx(key):
+    """把 remember() 記住的表格轉成 Excel。回傳 {"data": base64 或 None, "name": 檔名}。"""
+    if key not in STATE["tables"]:
+        raise ValueError(L(f"沒有這個表格：{key}", f"No such table: {key}"))
+    df, index, name = STATE["tables"][key]
+    return {"data": xlsx_b64(df, index), "name": name}
+
+
 def kv(n, share=None, digits=0):
     """KPI 數值：件數（占比）。"""
     n = int(n) if n == n else 0
@@ -302,7 +318,7 @@ def load(rows, start=None, progress=print):
                f"  Period from {ps:%Y-%m-%d}, data as of {rd:%Y-%m-%d}, {len(data):,} cases"))
     rep = E.run_all(data, progress=lambda i, n, t: progress(f"  [{i}/{n}] {t}"))
     progress(L(f"  零件明細 {len(rep.parts):,} 顆", f"  {len(rep.parts):,} part lines"))
-    STATE["rep"], STATE["data"], STATE["charts"] = rep, data, {}
+    STATE["rep"], STATE["data"], STATE["charts"], STATE["tables"] = rep, data, {}, {}
     if STATE["chart_dir"] is None:
         STATE["chart_dir"] = tempfile.mkdtemp()
     return json.dumps(summary(), ensure_ascii=False)
@@ -348,10 +364,10 @@ def tab_demand(by="國家", weeks=4):
     chart = None
     if "合計" in wk.columns and len(wk):
         chart = {"labels": [str(i) for i in wk.index], "values": [_f(v) for v in wk["合計"]]}
-    return {"weekly": df_json(wk), "weekly_xlsx": xlsx_b64(wk), "weekly_name": T("週申請零件量.xlsx"), "weekly_chart": chart,
+    return {"weekly": df_json(wk), "weekly_x": remember("demand.weekly", wk, True, T("週申請零件量.xlsx")), "weekly_chart": chart,
             "forecast_title": L(f"未來 {weeks} 週需求推估（最近 4 個完整週平均 × 週數；高峰＝最高週 × 週數）",
                                 f"Next {weeks} weeks demand forecast (average of the last 4 full weeks × weeks; peak = highest week × weeks)"),
-            "forecast": df_json(fc), "top": df_json(tp), "top_xlsx": xlsx_b64(tp), "top_name": T("Top料號.xlsx")}
+            "forecast": df_json(fc), "top": df_json(tp), "top_x": remember("demand.top", tp, True, T("Top料號.xlsx"))}
 
 
 def tab_stock(days=14):
@@ -366,9 +382,9 @@ def tab_stock(days=14):
                      kpi("等待中位數", L(f"{med:.0f} 天", f"{med:.0f} days")),
                      kpi("零件在途／已配案件", f"{int(k['零件在途或已配件數']):,}"),
                      kpi("待供貨料號數", f"{len(sp):,}")],
-            "parts": df_json(sp), "parts_xlsx": xlsx_b64(sp), "parts_name": T("缺料料號.xlsx"),
+            "parts": df_json(sp), "parts_x": remember("stock.parts", sp, True, T("缺料料號.xlsx")),
             "cases_title": tr("催料案件清單") + L(f"（等待 ≥ {days} 天）", f" (waiting ≥ {days} days)"),
-            "cases": df_json(sc, index=False), "cases_xlsx": xlsx_b64(sc, index=False), "cases_name": T("催料清單.xlsx")}
+            "cases": df_json(sc, index=False), "cases_x": remember("stock.cases", sc, False, T("催料清單.xlsx"))}
 
 
 def tab_ship(days=30):
@@ -397,13 +413,13 @@ def tab_ship(days=30):
                               "series": [{"name": L("已配到", "Allocated"), "values": t7["已配貨"].astype(int).tolist() if "已配貨" in t7.columns else zero, "color": "#7FA650"},
                                          {"name": L("運送中", "In transit"), "values": t7["運送中"].astype(int).tolist() if "運送中" in t7.columns else zero, "color": "#E8862B"}]},
             "backlog_hint": tr("紅字＝放超過 7 天的案件有 10 件以上的維修站"),
-            "backlog": df_json(bl, highlight=lambda r: r.get("超過7天", 0) >= 10), "backlog_xlsx": xlsx_b64(bl), "backlog_name": T("待出貨積壓.xlsx"),
+            "backlog": df_json(bl, highlight=lambda r: r.get("超過7天", 0) >= 10), "backlog_x": remember("ship.backlog", bl, True, T("待出貨積壓.xlsx")),
             "transit": df_json(tr_),
             "expiring_title": L(f"在途且保固 {days} 天內到期（含建案時保固內、現已過期）",
                                 f"Open cases with warranty ending within {days} days (incl. in warranty at creation, now expired)"),
             "expiring_hint": tr("紅字＝保固已經過期（建案時在保固內），結案時要按保固內處理"),
             "expiring": df_json(ex, index=False, highlight=lambda r: r.get("距到期天數", 0) < 0),
-            "expiring_xlsx": xlsx_b64(ex, index=False), "expiring_name": T("保固到期在途案.xlsx")}
+            "expiring_x": remember("ship.expiring", ex, False, T("保固到期在途案.xlsx"))}
 
 
 def _chart_b64(key):
@@ -432,7 +448,13 @@ def analysis(key):
     return {"key": a.key, "title": a.title, "subtitle": a.subtitle, "bullets": list(a.bullets),
             "paragraph": a.paragraph, "conclusion": a.conclusion, "bullet": bullet(),
             "labels": {"points": L("重點", "Key points"), "about": L("說明", "What it shows"), "takeaway": T("結論：")},
-            "chart": _chart_b64(key), "tables": [[n, T(n)] for n in a.tables]}
+            "tables": [[n, T(n)] for n in a.tables]}
+
+
+def chart(key):
+    """分析的圖（需要 matplotlib，與文字分開取，文字不必等圖）。"""
+    _get(key)
+    return {"chart": _chart_b64(key)}
 
 
 def analysis_table(key, name):
@@ -440,7 +462,7 @@ def analysis_table(key, name):
     df = a.tables.get(name)
     # 整張表都是比例的（例如「占比」「組成」）全部以百分比顯示
     whole_pct = ("占比)" in name) or name.endswith("_占比") or ("組成" in name)
-    return {"table": df_json(df, pct=whole_pct), "xlsx": xlsx_b64(df), "name": f"{key}_{T(name)}.xlsx"}
+    return {"table": df_json(df, pct=whole_pct), "x": remember(f"analysis.{key}.{name}", df, True, f"{key}_{T(name)}.xlsx")}
 
 
 def conclusions():
@@ -550,7 +572,7 @@ def po_result():
                      kpi("平均交期（天）", f"{(_f(arrived['交期天數'].mean()) if len(arrived) else 0):.1f}"),
                      kpi("未到貨且已逾期", f"{int((~po['已到貨'] & (po['承諾交期'] < today)).sum()):,}")],
             "suppliers": df_json(sup), "late": df_json(late[cols], index=False),
-            "late_xlsx": xlsx_b64(late[cols], index=False), "late_name": T("逾期訂單.xlsx")}
+            "late_x": remember("po.late", late[cols], False, T("逾期訂單.xlsx"))}
 
 
 # ----------------------------------------------------------------------------
@@ -560,7 +582,8 @@ def dispatch(cmd, args_json, progress=print):
     args = json.loads(args_json) if args_json else {}
     fns = {"summary": summary, "tab_demand": tab_demand, "tab_stock": tab_stock, "tab_ship": tab_ship,
            "analysis": analysis, "analysis_table": analysis_table, "conclusions": conclusions,
-           "po_template": po_template, "po_result": po_result, "set_lang": set_lang, "ui": ui, "glossary": glossary}
+           "po_template": po_template, "po_result": po_result, "set_lang": set_lang, "ui": ui, "glossary": glossary,
+           "chart": chart, "table_xlsx": table_xlsx}
     if cmd == "export":
         return json.dumps(export(args["kind"], progress), ensure_ascii=False)
     if cmd not in fns:
