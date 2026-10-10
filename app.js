@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10k";
+  const V = "2026-10-10l";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -132,6 +132,7 @@
     if (switching) { $("lang-sel").value = LANG; toast(t("切換語言中…")); return; }
     LANG = lang; store.set("rma_lang", lang);
     loadCachedUI(); applyUI(); renderActions();
+    if (window.RMAScene) RMAScene.setLang(LANG);
     worker.postMessage({ id: 0, cmd: "ui_lang", args: { lang } });   // worker 自己的進度訊息也換語言
     if (!ready) return;   // 啟動中：先換介面字串；啟動完成時 onReady 會再與 Python 同步
     switching = true;
@@ -185,13 +186,6 @@
     else if (phase === "load" && id === "parts" && m.state === "done") { ids.forEach((x) => (stepState[x] = "done")); phaseDone = "done"; }
     renderSteps(phase === "boot" ? bootPct : loadPct());
   }
-  function setTruck(pct, moving) {
-    // 場景裡的小貨車：從倉庫門口（x=300）開到右邊（x=1430），位置＝進度（從貨櫃前面、人物後面經過）
-    const tr = $("truck"); if (!tr) return;
-    const x = 300 + 1130 * Math.max(0, Math.min(100, pct)) / 100;
-    tr.style.transform = `translate(${x}px, 0)`;
-    tr.classList.toggle("moving", !!moving);
-  }
   function loadPct() {
     let pct = 0;
     for (const [id, [a, b]] of Object.entries(LOAD_PCT)) {
@@ -208,7 +202,7 @@
     const p = phaseDone === "done" ? 100 : Math.max(0, Math.min(100, pct | 0));
     $("steps-pct").textContent = p + "%";
     const bar = $("steps-bar"); bar.style.width = p + "%"; bar.className = "pbar-fill" + (phaseDone === "done" ? " done" : phaseDone === "fail" ? " fail" : running ? " running" : "");
-    setTruck(p, running && phaseDone !== "fail");
+    if (window.RMAScene) RMAScene.setProgress(p / 100);
     $("steps-list").innerHTML = P.steps.map(([id, label]) => {
       const st = stepState[id] || "wait";
       const ico = st === "done" ? "✓" : st === "fail" ? "✕" : "";
@@ -334,6 +328,7 @@
     const tzo = $("tz-sel").selectedOptions[0];
     $("tzname").textContent = tzo ? tzo.textContent : "";
     tick();
+    if (window.RMAScene) { RMAScene.setTz(PREFS.tz); RMAScene.resize(); }
   }
   for (const k of Object.keys(PREFS)) $(k + "-sel").addEventListener("change", (e) => { PREFS[k] = e.target.value; store.set("rma_" + k, PREFS[k]); applyPrefs(); });
   function tick() {
@@ -682,27 +677,11 @@
     downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), t("跨單位協調待辦.csv"));
   });
 
-  // ------------------------------------------------------------ 場景小事件（隨機：揮手、氣球、睡覺、散步）
-  const EVENTS = [
-    { sel: ".cat", cls: "sleep", dur: 9000 }, { sel: ".dog", cls: "has-balloons", dur: 10000 },
-    { sel: ".worker-a", cls: "wave", dur: 3500 }, { sel: ".worker-b", cls: "wave", dur: 3500 }, { sel: ".dog", cls: "walk", dur: 6000 },
-  ];
-  function sceneEvent() {
-    const choices = EVENTS.filter((e) => { const el = document.querySelector(".scene " + e.sel); return el && !el.classList.contains(e.cls) && !(e.cls === "walk" && el.classList.contains("has-balloons")) && !(e.cls === "has-balloons" && el.classList.contains("walk")); });
-    if (choices.length && !document.hidden) {
-      const e = choices[Math.floor(Math.random() * choices.length)];
-      const el = document.querySelector(".scene " + e.sel);
-      el.classList.add(e.cls);
-      setTimeout(() => el.classList.remove(e.cls), e.dur);
-    }
-    setTimeout(sceneEvent, 4000 + Math.random() * 7000);
-  }
-  if (!window.matchMedia || !window.matchMedia("(prefers-reduced-motion: reduce)").matches) setTimeout(sceneEvent, 2500);
-
   // ------------------------------------------------------------ 啟動
   applyUI();
   applyPrefs();
   renderActions();
   startPhase("boot");
+  if (window.RMAScene) RMAScene.init({ lang: LANG, tz: PREFS.tz, sign: "RMA" });
   call("boot", Object.assign({ lang: LANG }, CFG)).catch(bootFailed);
 })();

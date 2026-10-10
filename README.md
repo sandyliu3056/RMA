@@ -8,7 +8,7 @@
 | `rma_engine.py` | 分析引擎。讀 AIO 匯出檔、清理、輔助欄位、11 項分析、零件明細解析，匯出 Excel／PNG／PPTX。可獨立以指令執行。 |
 | `i18n.py` | 語言字典與名詞定義。內部欄名一律中文，顯示時才轉成目前語言（中文模式套用白話用詞）。 |
 | `零件規劃平台.py` | 桌面程式（tkinter）。七個分頁對應工作架構的模組，所有數字來自引擎。 |
-| `index.html`、`app.js`、`worker.js`、`web_glue.py`、`ui_strings.js` | 瀏覽器版。用 Pyodide 把同一個引擎搬進瀏覽器執行；`ui_strings.js` 由 `make_ui_strings.py` 從 `i18n.py` 產生。 |
+| `index.html`、`app.js`、`worker.js`、`web_glue.py`、`ui_strings.js`、`scene.js` | 瀏覽器版。用 Pyodide 把同一個引擎搬進瀏覽器執行；`ui_strings.js` 由 `make_ui_strings.py` 從 `i18n.py` 產生；`scene.js` 是資料來源頁的貨場動畫（與 UPS Reprice Platform 同一段程式，天色依時區當地時間變化，點貓狗或工人會有反應）。 |
 | `web_app.py` | Streamlit 版（需要能跑 Python 的主機），只有中文介面。 |
 
 ## 安裝（Python 版）
