@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10f";
+  const V = "2026-10-10h";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -54,6 +54,7 @@
     $("tzname").textContent = tzo ? tzo.textContent : "";
     if (!ready && bootPct > 0 && !$("boot-pill").classList.contains("fail")) showProgress(bootPct);
     if (ready) showExtras();
+    if (phase) renderSteps(phase === "boot" ? bootPct : loadPct());
   }
   function setT(el, key) { el.dataset.t = key; el.textContent = t(key); }
 
@@ -74,7 +75,8 @@
   worker.onmessage = (ev) => {
     const m = ev.data;
     if (m.type === "log") { log(m.msg); return; }
-    if (m.type === "progress") { showProgress(m.pct); return; }
+    if (m.type === "progress") { showProgress(m.pct); if (phase === "boot") renderSteps(m.pct); return; }
+    if (m.type === "step") { onStep(m); return; }
     if (m.type === "extras") { extrasState = m.state; showExtras(); return; }
     if (m.type === "ready") { onReady(); return; }
     const p = pending.get(m.id);
@@ -105,7 +107,8 @@
     $("boot-pill").classList.add("fail"); $("boot-pill").title = msg;
     setT($("boot-text"), "啟動失敗");
     setT($("load"), "啟動失敗，請重新整理頁面");
-    log(msg); toast(msg, 10000);
+    phaseDone = "fail"; const cur = Object.keys(stepState).find((x) => stepState[x] === "run"); if (cur) stepState[cur] = "fail";
+    log(msg); toast(msg, 10000); renderSteps(bootPct);
   }
   async function onReady() {
     ready = true;
@@ -149,12 +152,69 @@
   $("lang-sel").addEventListener("change", (e) => switchLang(e.target.value));
 
   // ------------------------------------------------------------ 小工具
-  let logTouched = false;
   function log(msg) {
     const el = $("log");
-    if (!logTouched) { logTouched = true; el.textContent = ""; el.removeAttribute("data-t"); }
     el.textContent += (el.textContent ? "\n" : "") + msg;
     el.scrollTop = el.scrollHeight;
+    const sm = $("steps-msg");
+    sm.textContent = String(msg).trim(); sm.style.animation = "none"; void sm.offsetWidth; sm.style.animation = "";
+  }
+  // ------------------------------------------------------------ 步驟進度面板（啟動／載入的動畫）
+  const PHASES = {
+    boot: { title: "啟動", done: "就緒", steps: [["runtime", "下載瀏覽器版 Python"], ["pandas", "載入 pandas"], ["engine", "載入分析引擎"], ["extras", "圖表與匯出套件（背景）"]] },
+    load: { title: "載入並分析", done: "完成", steps: [["read", "讀取 Excel"], ["clean", "整理資料"], ["analyze", "執行分析"], ["parts", "零件明細"]] },
+  };
+  const LOAD_PCT = { read: [0, 10], clean: [10, 25], analyze: [25, 92], parts: [92, 100] };
+  let phase = null, stepState = {}, stepInfo = {}, phaseDone = null;
+  function startPhase(name) {
+    phase = name; phaseDone = null; stepState = {}; stepInfo = {};
+    for (const [id] of PHASES[name].steps) stepState[id] = "wait";
+    $("log").textContent = ""; $("steps-msg").textContent = "";
+    renderSteps(0);
+  }
+  function onStep(m) {
+    if (m.phase !== phase) { if (m.phase === "boot" && phase === "load") return; startPhase(m.phase); }
+    const ids = PHASES[phase].steps.map((s) => s[0]);
+    let id = m.id;
+    if (id === "current") id = ids.find((x) => stepState[x] === "run") || ids[ids.length - 1];
+    const k = ids.indexOf(id); if (k < 0) return;
+    if (m.state === "run") ids.slice(0, k).forEach((x) => { if (stepState[x] !== "fail" && x !== "extras") stepState[x] = "done"; });
+    stepState[id] = m.state;
+    if (m.i && m.n) stepInfo[id] = `${m.i}/${m.n}`;
+    if (m.state === "fail") phaseDone = "fail";
+    else if (phase === "load" && id === "parts" && m.state === "done") { ids.forEach((x) => (stepState[x] = "done")); phaseDone = "done"; }
+    renderSteps(phase === "boot" ? bootPct : loadPct());
+  }
+  function setTruck(pct, moving) {
+    // 場景裡的小貨車：從倉庫門口（x=300）開到右邊（x=1430），位置＝進度（經過貨櫃與人物時在他們後面）
+    const tr = $("truck"); if (!tr) return;
+    const x = 300 + 1130 * Math.max(0, Math.min(100, pct)) / 100;
+    tr.style.transform = `translate(${x}px, 0)`;
+    tr.classList.toggle("moving", !!moving);
+  }
+  function loadPct() {
+    let pct = 0;
+    for (const [id, [a, b]] of Object.entries(LOAD_PCT)) {
+      if (stepState[id] === "done") pct = b;
+      else if (stepState[id] === "run") { const f = stepInfo[id] ? (+stepInfo[id].split("/")[0]) / (+stepInfo[id].split("/")[1]) : 0.3; pct = a + (b - a) * f; break; }
+    }
+    return phaseDone === "done" ? 100 : pct;
+  }
+  function renderSteps(pct) {
+    if (!phase) return;
+    const P = PHASES[phase];
+    const running = Object.values(stepState).some((s) => s === "run") && phaseDone !== "done";
+    $("steps-title").textContent = t(phaseDone === "done" ? P.done : phaseDone === "fail" ? "失敗" : P.title);
+    const p = phaseDone === "done" ? 100 : Math.max(0, Math.min(100, pct | 0));
+    $("steps-pct").textContent = p + "%";
+    const bar = $("steps-bar"); bar.style.width = p + "%"; bar.className = "pbar-fill" + (phaseDone === "done" ? " done" : phaseDone === "fail" ? " fail" : running ? " running" : "");
+    setTruck(p, running && phaseDone !== "fail");
+    $("steps-list").innerHTML = P.steps.map(([id, label]) => {
+      const st = stepState[id] || "wait";
+      const ico = st === "done" ? "✓" : st === "fail" ? "✕" : "";
+      const sub = stepInfo[id] && st !== "done" ? ` <span class="sub">${esc(stepInfo[id])}</span>` : "";
+      return `<li class="${st}"><span class="ico">${ico}</span><span class="lab">${esc(t(label))}${sub}</span></li>`;
+    }).join("");
   }
   let toastTimer = null;
   function toast(msg, ms) {
@@ -328,6 +388,7 @@
     if (start === null) { toast(t("分析起日格式不對，請輸入像 2026-08-01 這樣的日期，或留空。"), 6000); return; }
     busy($("load"), true, t("分析中…"));
     setT($("status"), "載入中…");
+    startPhase("load");
     try {
       const buffer = await f.arrayBuffer();
       const s = await call("load", { buffer, start }, [buffer]);
@@ -337,6 +398,7 @@
     } catch (e) {
       log(t("錯誤：") + e.message); toast(t("載入失敗：") + friendly(e), 8000);
       setT($("status"), "載入失敗");
+      phaseDone = "fail"; renderSteps(loadPct());
     } finally { busy($("load"), false); }
   });
 
@@ -624,5 +686,6 @@
   applyUI();
   applyPrefs();
   renderActions();
+  startPhase("boot");
   call("boot", Object.assign({ lang: LANG }, CFG)).catch(bootFailed);
 })();

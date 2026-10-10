@@ -41,6 +41,8 @@ const fmt = (s, ...a) => s.replace(/\{(\d+)\}/g, (_, i) => a[+i]);
 
 function log(msg) { self.postMessage({ type: "log", msg }); }
 function progress(pct, msg) { self.postMessage({ type: "progress", pct, msg }); if (msg) log(msg); }
+/* 步驟動畫：phase = boot / load；state = run / done / fail；i,n = 子進度 */
+function step(phase, id, state, i, n) { self.postMessage({ type: "step", phase, id, state, i, n }); }
 
 async function fetchText(url) {
   const r = await fetch(url);
@@ -57,15 +59,18 @@ function wheelUrl(w) {
 async function boot(cfg) {
   config = cfg;
   M = MSG[cfg.lang === "en" ? "en" : "zh"];
+  step("boot", "runtime", "run");
   progress(3, M.download);
   importScripts(cfg.pyodideBase + "pyodide.js");
   importScripts(cfg.xlsxUrl);
   pyodide = await loadPyodide({ indexURL: cfg.pyodideBase });
   pyodide.setStdout({ batched: (s) => log(s) });
   pyodide.setStderr({ batched: (s) => { if (!/Glyph|UserWarning|warnings\.warn|font cache/.test(s)) log(s); } });
+  step("boot", "runtime", "done"); step("boot", "pandas", "run");
   progress(40, M.packages);
   let n = 0;
   await pyodide.loadPackage(["pandas", "numpy"], { messageCallback: (m) => { if (/^Loaded/.test(m)) progress(Math.min(78, 45 + 8 * ++n)); log(m); } });
+  step("boot", "pandas", "done"); step("boot", "engine", "run");
   progress(80, M.engine);
   pyodide.FS.mkdirTree("/app/fonts");
   pyodide.FS.writeFile("/app/i18n.py", await fetchText(cfg.i18nUrl));
@@ -79,6 +84,7 @@ sys.path.insert(0, "/app")
 import web_glue
 `);
   glue = pyodide.pyimport("web_glue");
+  step("boot", "engine", "done");
   progress(100, M.ready);
   self.postMessage({ type: "ready" });
   ensureExtras().catch(() => {});
@@ -87,10 +93,10 @@ import web_glue
 /* 第二段：圖表與匯出需要的套件。失敗時下次需要會再試。 */
 function ensureExtras() {
   if (!extras) {
-    self.postMessage({ type: "extras", state: "loading" });
+    self.postMessage({ type: "extras", state: "loading" }); step("boot", "extras", "run");
     extras = loadExtras()
-      .then(() => self.postMessage({ type: "extras", state: "ready" }))
-      .catch((e) => { extras = null; self.postMessage({ type: "extras", state: "failed" }); log(M.extrasFail + ((e && e.message) || e)); throw e; });
+      .then(() => { self.postMessage({ type: "extras", state: "ready" }); step("boot", "extras", "done"); })
+      .catch((e) => { extras = null; self.postMessage({ type: "extras", state: "failed" }); step("boot", "extras", "fail"); log(M.extrasFail + ((e && e.message) || e)); throw e; });
   }
   return extras;
 }
@@ -158,11 +164,16 @@ self.onmessage = async (ev) => {
       M = MSG[args && args.lang === "en" ? "en" : "zh"];
       result = true;
     } else if (cmd === "load") {
+      step("load", "read", "run");
       log(M.reading);
       const rows = readSheet(args.buffer, "AllInOneData");
       log(fmt(M.rows, rows.length.toLocaleString()));
+      step("load", "read", "done");
       const pyRows = pyodide.toPy(rows);
-      try { result = JSON.parse(glue.load(pyRows, args.start || null, (m) => log(m))); }
+      // Python 端的 progress(訊息, 階段, i, n)；None 會變成 undefined
+      const onProgress = (m, stage, i, n) => { log(m); if (stage) step("load", stage, "run", i, n); };
+      try { result = JSON.parse(glue.load(pyRows, args.start || null, onProgress)); step("load", "parts", "done"); }
+      catch (e) { step("load", "current", "fail"); throw e; }
       finally { pyRows.destroy(); }
     } else if (cmd === "po") {
       const rows = readSheet(args.buffer, null);

@@ -106,7 +106,62 @@
   .hb-legend i { font-style:normal; }
   .hb-bar i.dark { color:var(--navy); }
   .hb-row b { color:var(--mute); font-weight:400; }
-  .log { background:var(--panel); border:2px solid var(--navy); border-radius:8px; padding:10px 12px; font-family:Consolas, monospace; font-size:.82rem; height:200px; overflow:auto; white-space:pre-wrap; }
+  .log { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-family:Consolas, monospace; font-size:.8rem; max-height:180px; overflow:auto; white-space:pre-wrap; margin-top:6px; }
+  /* 步驟進度（啟動／載入）動畫 */
+  .steps-panel { background:var(--panel); border:2px solid var(--navy); border-radius:9px; padding:12px 16px; margin:10px 0; }
+  .steps-head { display:flex; justify-content:space-between; align-items:baseline; font-weight:700; }
+  .steps-pct { color:var(--mute); font-variant-numeric:tabular-nums; }
+  .pbar { height:10px; border-radius:5px; background:var(--stripe); overflow:hidden; margin:6px 0 10px; border:1px solid var(--line); }
+  .pbar-fill { height:100%; width:0; border-radius:5px; background:var(--primary); transition:width .5s ease; }
+  .pbar-fill.running { background-image:linear-gradient(45deg, rgba(255,255,255,.35) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.35) 50%, rgba(255,255,255,.35) 75%, transparent 75%, transparent); background-size:28px 28px; animation:stripes 1s linear infinite; }
+  .pbar-fill.done { background:#6CC070; }
+  .pbar-fill.fail { background:var(--warn); }
+  @keyframes stripes { to { background-position:28px 0; } }
+  .steps { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:6px 22px; }
+  .steps li { display:flex; align-items:center; gap:8px; color:var(--mute); font-size:.92rem; }
+  .steps li .ico { width:20px; height:20px; border-radius:50%; border:2px solid var(--line); display:inline-flex; align-items:center; justify-content:center; font-size:.75rem; flex:none; background:#fff; }
+  .steps li.run { color:var(--ink); font-weight:700; }
+  .steps li.run .ico { border-color:var(--line); border-top-color:var(--accent); animation:sp .9s linear infinite; }
+  .steps li.run .lab { animation:pulse 1.4s ease-in-out infinite; }
+  .steps li.done { color:var(--ink); }
+  .steps li.done .ico { background:#6CC070; border-color:#6CC070; color:#fff; animation:pop .35s ease-out; }
+  .steps li.fail .ico { background:var(--warn); border-color:var(--warn); color:#fff; }
+  .steps li .sub { color:var(--mute); font-weight:400; font-size:.82rem; }
+  .steps-msg { color:var(--mute); font-size:.85rem; margin-top:8px; min-height:1.3em; animation:fadein .35s ease; }
+  .logwrap { margin-top:6px; }
+  .logwrap summary { cursor:pointer; color:var(--mute); font-size:.82rem; }
+  /* 場景動畫 */
+  .scene { border:2px solid var(--navy); border-radius:9px; overflow:hidden; margin:10px 0; background:#3E5B86; line-height:0; }
+  .scene svg { width:100%; height:auto; display:block; }
+  .scene svg * { transform-box:fill-box; }
+  .scene .cloud-layer { animation:drift 70s linear infinite; }
+  .scene .star { animation:twinkle 2.6s ease-in-out infinite; }
+  .scene .flag { transform-origin:50% 0; animation:wave 1.3s ease-in-out infinite alternate; }
+  .scene .worker { animation:bob 1.9s ease-in-out infinite; }
+  .scene .worker .arm { transform-origin:50% 100%; animation:wavearm 1s ease-in-out infinite alternate; }
+  .scene .dog { animation:bob 1.3s ease-in-out infinite; }
+  .scene .dog-tail { transform-origin:0 100%; animation:wag .35s ease-in-out infinite alternate; }
+  .scene .cat-tail { transform-origin:0 100%; animation:swish 1.8s ease-in-out infinite alternate; }
+  .scene .flower { transform-origin:50% 100%; animation:sway 2.2s ease-in-out infinite alternate; }
+  .scene .butterfly { animation:flutter 7s ease-in-out infinite alternate; }
+  .scene .wing { transform-origin:50% 50%; animation:flap .22s ease-in-out infinite alternate; }
+  .scene .truck { transition:transform .9s ease; }
+  .scene .truck.moving .wheel { transform-origin:50% 50%; animation:sp .7s linear infinite; }
+  @keyframes drift { to { transform:translateX(-1500px); } }
+  @keyframes twinkle { 50% { opacity:.2; } }
+  @keyframes wave { from { transform:rotate(-7deg); } to { transform:rotate(7deg); } }
+  @keyframes bob { 50% { transform:translateY(-3px); } }
+  @keyframes wavearm { from { transform:rotate(-25deg); } to { transform:rotate(25deg); } }
+  @keyframes wag { from { transform:rotate(-18deg); } to { transform:rotate(18deg); } }
+  @keyframes swish { from { transform:rotate(-12deg); } to { transform:rotate(14deg); } }
+  @keyframes sway { from { transform:rotate(-5deg); } to { transform:rotate(5deg); } }
+  @keyframes flutter { 0% { transform:translate(0,0); } 25% { transform:translate(18px,-22px); } 50% { transform:translate(40px,-6px); } 75% { transform:translate(14px,-30px); } 100% { transform:translate(0,0); } }
+  @keyframes flap { from { transform:scaleX(1); } to { transform:scaleX(.35); } }
+  @media (max-width:600px) { .scene svg { height:110px; } }
+  @media (prefers-reduced-motion:reduce) { .scene svg * { animation:none !important; } }
+  @keyframes pop { 0% { transform:scale(.4); } 70% { transform:scale(1.2); } 100% { transform:scale(1); } }
+  @keyframes pulse { 50% { opacity:.55; } }
+  @keyframes fadein { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
   .notice { background:var(--panel); border:2px solid var(--navy); border-radius:8px; padding:9px 14px; font-size:.9rem; margin:8px 0; }
   .boot { display:flex; align-items:center; gap:10px; }
   .spin { width:16px; height:16px; border:3px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:sp 1s linear infinite; flex:none; }
@@ -194,11 +249,73 @@
     <div class="kpis" id="src-kpis"></div>
     <div class="caption" id="src-caption"></div>
     <div class="caption" id="src-period" style="font-weight:700;color:var(--ink)"></div>
-    <div class="log" id="log" data-t="1. 選擇 AIO 匯出檔（.xlsx，工作表 AllInOneData）
-2. 按「載入並分析」，第一次約 1 分鐘（分析在你的瀏覽器裡進行，檔案不會上傳到任何伺服器）
-3. 到各分頁查看，或在「報表與分析」下載 Excel／PPT">1. 選擇 AIO 匯出檔（.xlsx，工作表 AllInOneData）
-2. 按「載入並分析」，第一次約 1 分鐘（分析在你的瀏覽器裡進行，檔案不會上傳到任何伺服器）
-3. 到各分頁查看，或在「報表與分析」下載 Excel／PPT</div>
+    <div class="steps-panel" id="steps">
+      <div class="steps-head"><span class="steps-title" id="steps-title"></span><span class="steps-pct" id="steps-pct"></span></div>
+      <div class="pbar"><div class="pbar-fill" id="steps-bar"></div></div>
+      <ol class="steps" id="steps-list"></ol>
+      <div class="steps-msg" id="steps-msg"></div>
+      <details class="logwrap"><summary data-t="詳細記錄">詳細記錄</summary><div class="log" id="log"></div></details>
+    </div>
+    <!-- 場景動畫：倉庫、貨櫃、人物與動物（純 SVG＋CSS 動畫；小貨車的位置＝進度） -->
+    <div class="scene" aria-hidden="true">
+      <svg viewBox="0 0 1500 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3E5B86"/><stop offset="1" stop-color="#8496B3"/></linearGradient>
+        </defs>
+        <rect width="1500" height="200" fill="url(#sky)"/>
+        <g fill="#FFF6D6"><circle class="star" cx="673" cy="27" r="1.3" style="animation-delay:2.0s"/><circle class="star" cx="108" cy="17" r="1.6" style="animation-delay:0.3s"/><circle class="star" cx="758" cy="82" r="1" style="animation-delay:1.6s"/><circle class="star" cx="449" cy="12" r="1" style="animation-delay:1.3s"/><circle class="star" cx="866" cy="16" r="1" style="animation-delay:0.2s"/><circle class="star" cx="1138" cy="62" r="1" style="animation-delay:1.8s"/><circle class="star" cx="263" cy="36" r="1.6" style="animation-delay:2.0s"/><circle class="star" cx="1203" cy="15" r="1.6" style="animation-delay:1.8s"/><circle class="star" cx="822" cy="14" r="1" style="animation-delay:0.1s"/><circle class="star" cx="1150" cy="25" r="1.3" style="animation-delay:1.3s"/><circle class="star" cx="305" cy="77" r="1" style="animation-delay:1.8s"/><circle class="star" cx="641" cy="79" r="1.6" style="animation-delay:0.5s"/><circle class="star" cx="221" cy="82" r="1.6" style="animation-delay:2.0s"/><circle class="star" cx="394" cy="55" r="1" style="animation-delay:1.7s"/><circle class="star" cx="1468" cy="16" r="1.6" style="animation-delay:0.1s"/><circle class="star" cx="1277" cy="34" r="1.3" style="animation-delay:2.1s"/><circle class="star" cx="1098" cy="62" r="1.3" style="animation-delay:1.4s"/><circle class="star" cx="1209" cy="66" r="1.3" style="animation-delay:0.9s"/><circle class="star" cx="518" cy="109" r="1" style="animation-delay:2.2s"/><circle class="star" cx="509" cy="18" r="1.6" style="animation-delay:0.9s"/><circle class="star" cx="1085" cy="71" r="1.3" style="animation-delay:2.3s"/><circle class="star" cx="929" cy="44" r="1.6" style="animation-delay:0.2s"/></g>
+        <path d="M612 34 A13 13 0 1 0 612 60 A10 10 0 1 1 612 34 Z" fill="#F5E9C0"/>
+        <g class="cloud-layer" fill="#E3E8EF" stroke="#9AA7B8" stroke-width="1.5"><g><g class="cloud" transform="translate(80,48) scale(1)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(330,32) scale(0.8)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(560,62) scale(1.1)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(820,40) scale(0.9)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(1000,58) scale(0.7)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(1090,36) scale(1)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(1240,50) scale(0.6)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(1330,30) scale(1)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g></g><g transform="translate(1500,0)"><g class="cloud" transform="translate(80,48) scale(1)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(330,32) scale(0.8)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(560,62) scale(1.1)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(820,40) scale(0.9)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(1000,58) scale(0.7)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(1090,36) scale(1)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(1240,50) scale(0.6)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g><g class="cloud" transform="translate(1330,30) scale(1)"><ellipse cx="0" cy="0" rx="30" ry="11"/><ellipse cx="-16" cy="-5" rx="17" ry="11"/><ellipse cx="12" cy="-8" rx="19" ry="13"/><ellipse cx="26" cy="-2" rx="14" ry="9"/></g></g></g>
+        <g stroke="#3B2A1A" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+          <ellipse cx="850" cy="172" rx="70" ry="13" fill="#9FC06A"/><ellipse cx="1150" cy="172" rx="80" ry="13" fill="#9FC06A"/><ellipse cx="1410" cy="172" rx="70" ry="13" fill="#9FC06A"/><ellipse cx="1530" cy="172" rx="60" ry="13" fill="#9FC06A"/>
+          <rect x="0" y="168" width="1500" height="32" fill="#C9B79C"/>
+          <!-- 倉庫 -->
+          <ellipse cx="8" cy="166" rx="13" ry="7" fill="#6FA34A"/><ellipse cx="392" cy="166" rx="13" ry="7" fill="#6FA34A"/>
+          <rect x="24" y="118" width="352" height="52" fill="#F3E6C8"/>
+          <path d="M14 118 Q200 104 386 118 L376 106 Q200 96 24 106 Z" fill="#E6D3A6"/>
+          <rect x="106" y="128" width="188" height="22" rx="2" fill="#3B2A1A"/>
+          <text x="200" y="144" text-anchor="middle" font-size="15" font-weight="700" letter-spacing="3" fill="#F2B134" stroke="none">RMA</text>
+          <rect x="40" y="150" width="136" height="20" fill="#FFFDF7"/><line x1="40" y1="157" x2="176" y2="157"/><line x1="40" y1="164" x2="176" y2="164"/>
+          <rect x="204" y="150" width="136" height="20" fill="#FFFDF7"/><line x1="204" y1="157" x2="340" y2="157"/><line x1="204" y1="164" x2="340" y2="164"/>
+          <circle cx="190" cy="156" r="3" fill="#F2B134"/>
+          <path d="M22 112 Q200 124 378 112" fill="none"/><polygon class="flag" points="30,112 42,112 36,124" fill="#E85D75" style="animation-delay:0.0s"/><polygon class="flag" points="54,112 66,112 60,124" fill="#F2B134" style="animation-delay:0.2s"/><polygon class="flag" points="78,112 90,112 84,124" fill="#5B8FD0" style="animation-delay:0.4s"/><polygon class="flag" points="102,112 114,112 108,124" fill="#7FA650" style="animation-delay:0.6000000000000001s"/><polygon class="flag" points="126,112 138,112 132,124" fill="#E8862B" style="animation-delay:0.0s"/><polygon class="flag" points="150,112 162,112 156,124" fill="#B08BD0" style="animation-delay:0.2s"/><polygon class="flag" points="174,112 186,112 180,124" fill="#E85D75" style="animation-delay:0.4s"/><polygon class="flag" points="198,112 210,112 204,124" fill="#F2B134" style="animation-delay:0.6000000000000001s"/><polygon class="flag" points="222,112 234,112 228,124" fill="#5B8FD0" style="animation-delay:0.0s"/><polygon class="flag" points="246,112 258,112 252,124" fill="#7FA650" style="animation-delay:0.2s"/><polygon class="flag" points="270,112 282,112 276,124" fill="#E8862B" style="animation-delay:0.4s"/><polygon class="flag" points="294,112 306,112 300,124" fill="#B08BD0" style="animation-delay:0.6000000000000001s"/><polygon class="flag" points="318,112 330,112 324,124" fill="#E85D75" style="animation-delay:0.0s"/><polygon class="flag" points="342,112 354,112 348,124" fill="#F2B134" style="animation-delay:0.2s"/><polygon class="flag" points="366,112 378,112 372,124" fill="#5B8FD0" style="animation-delay:0.4s"/>
+          <!-- 小貨車（進度） -->
+          <g id="truck" class="truck">
+            <rect x="0" y="132" width="46" height="26" rx="2" fill="#F2B134"/><rect x="46" y="140" width="22" height="18" rx="3" fill="#6B4E31"/>
+            <rect x="50" y="143" width="12" height="8" rx="1" fill="#DCE3EC"/><rect x="66" y="152" width="4" height="4" fill="#F5E9C0" stroke="none"/>
+            <g class="wheel"><circle cx="12" cy="160" r="6" fill="#3B2A1A"/><circle cx="12" cy="160" r="2.5" fill="#C9B79C" stroke="none"/><line x1="12" y1="154" x2="12" y2="166" stroke="#C9B79C" stroke-width="1.5"/></g>
+            <g class="wheel"><circle cx="56" cy="160" r="6" fill="#3B2A1A"/><circle cx="56" cy="160" r="2.5" fill="#C9B79C" stroke="none"/><line x1="56" y1="154" x2="56" y2="166" stroke="#C9B79C" stroke-width="1.5"/></g>
+          </g>
+          <!-- 貨櫃 -->
+          <rect x="412" y="134" width="146" height="36" rx="2" fill="#3F7BC8"/><line x1="424" y1="137" x2="424" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="436" y1="137" x2="436" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="448" y1="137" x2="448" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="460" y1="137" x2="460" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="472" y1="137" x2="472" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="484" y1="137" x2="484" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="496" y1="137" x2="496" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="508" y1="137" x2="508" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="520" y1="137" x2="520" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><rect x="530" y="138" width="22" height="28" rx="1" fill="rgba(0,0,0,.15)"/><rect x="412" y="134" width="146" height="36" rx="2" fill="none"/><rect x="412" y="98" width="146" height="36" rx="2" fill="#C84B3A"/><line x1="424" y1="101" x2="424" y2="131" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="436" y1="101" x2="436" y2="131" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="448" y1="101" x2="448" y2="131" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="460" y1="101" x2="460" y2="131" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="472" y1="101" x2="472" y2="131" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="484" y1="101" x2="484" y2="131" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="496" y1="101" x2="496" y2="131" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="508" y1="101" x2="508" y2="131" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="520" y1="101" x2="520" y2="131" stroke="rgba(255,255,255,.28)" stroke-width="2"/><rect x="530" y="102" width="22" height="28" rx="1" fill="rgba(0,0,0,.15)"/><rect x="412" y="98" width="146" height="36" rx="2" fill="none"/><rect x="570" y="134" width="146" height="36" rx="2" fill="#3E9E6B"/><line x1="582" y1="137" x2="582" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="594" y1="137" x2="594" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="606" y1="137" x2="606" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="618" y1="137" x2="618" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="630" y1="137" x2="630" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="642" y1="137" x2="642" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="654" y1="137" x2="654" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="666" y1="137" x2="666" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><line x1="678" y1="137" x2="678" y2="167" stroke="rgba(255,255,255,.28)" stroke-width="2"/><rect x="688" y="138" width="22" height="28" rx="1" fill="rgba(0,0,0,.15)"/><rect x="570" y="134" width="146" height="36" rx="2" fill="none"/>
+          <!-- 工作人員 -->
+          <g class="worker">
+            <rect x="781" y="150" width="8" height="18" fill="#3B2A1A"/><rect x="792" y="150" width="8" height="18" fill="#3B2A1A"/>
+            <rect x="777" y="126" width="27" height="26" rx="4" fill="#E8862B"/><line x1="777" y1="136" x2="804" y2="136" stroke="#F2E394" stroke-width="3"/><line x1="777" y1="144" x2="804" y2="144" stroke="#F2E394" stroke-width="3"/>
+            <rect x="767" y="128" width="9" height="20" rx="4" fill="#E8862B"/>
+            <rect class="arm" x="804" y="110" width="9" height="20" rx="4" fill="#E8862B"/>
+            <circle cx="790" cy="116" r="10" fill="#F6D3B3"/><circle cx="786" cy="116" r="1.3" fill="#3B2A1A" stroke="none"/><circle cx="794" cy="116" r="1.3" fill="#3B2A1A" stroke="none"/>
+            <path d="M779 111 Q790 98 801 111 Z" fill="#E8862B"/><rect x="776" y="109" width="28" height="4" rx="2" fill="#E8862B"/>
+          </g>
+          <!-- 小狗 -->
+          <g class="dog">
+            <line class="dog-tail" x1="1082" y1="150" x2="1093" y2="139" stroke-width="3"/>
+            <rect x="1053" y="160" width="5" height="9" fill="#FFFDF7"/><rect x="1061" y="160" width="5" height="9" fill="#FFFDF7"/><rect x="1072" y="160" width="5" height="9" fill="#FFFDF7"/><rect x="1079" y="160" width="5" height="9" fill="#FFFDF7"/>
+            <ellipse cx="1068" cy="154" rx="18" ry="10" fill="#FFFDF7"/><ellipse cx="1074" cy="150" rx="7" ry="5" fill="#A0673A" stroke="none"/>
+            <circle cx="1051" cy="146" r="9" fill="#FFFDF7"/><ellipse cx="1044" cy="140" rx="4" ry="6" fill="#A0673A"/><circle cx="1047" cy="149" r="2" fill="#3B2A1A" stroke="none"/><circle cx="1053" cy="145" r="1.2" fill="#3B2A1A" stroke="none"/>
+          </g>
+          <!-- 小貓 -->
+          <g class="cat">
+            <path class="cat-tail" d="M1341 160 Q1356 158 1353 144" fill="none" stroke-width="3"/>
+            <ellipse cx="1330" cy="158" rx="12" ry="10" fill="#D9D9D9"/>
+            <circle cx="1330" cy="142" r="9" fill="#D9D9D9"/><polygon points="1322,136 1324,126 1330,134" fill="#D9D9D9"/><polygon points="1338,136 1336,126 1330,134" fill="#D9D9D9"/>
+            <circle cx="1326" cy="142" r="1.3" fill="#3B2A1A" stroke="none"/><circle cx="1334" cy="142" r="1.3" fill="#3B2A1A" stroke="none"/><path d="M1327 146 Q1330 149 1333 146" fill="none" stroke-width="1.2"/>
+          </g>
+          <g class="flower" transform="translate(822,0)"><line x1="0" y1="168" x2="0" y2="160" stroke="#5E8C3A" stroke-width="2"/><circle cx="0" cy="158.5" r="3.2" fill="#F2B134"/></g><g class="flower" transform="translate(846,0)"><line x1="0" y1="168" x2="0" y2="160" stroke="#5E8C3A" stroke-width="2"/><circle cx="0" cy="158.5" r="3.2" fill="#E85D75"/></g><g class="flower" transform="translate(870,0)"><line x1="0" y1="168" x2="0" y2="160" stroke="#5E8C3A" stroke-width="2"/><circle cx="0" cy="158.5" r="3.2" fill="#5B8FD0"/></g><g class="flower" transform="translate(1118,0)"><line x1="0" y1="168" x2="0" y2="160" stroke="#5E8C3A" stroke-width="2"/><circle cx="0" cy="158.5" r="3.2" fill="#F28C28"/></g><g class="flower" transform="translate(1140,0)"><line x1="0" y1="168" x2="0" y2="160" stroke="#5E8C3A" stroke-width="2"/><circle cx="0" cy="158.5" r="3.2" fill="#B08BD0"/></g><g class="flower" transform="translate(1164,0)"><line x1="0" y1="168" x2="0" y2="160" stroke="#5E8C3A" stroke-width="2"/><circle cx="0" cy="158.5" r="3.2" fill="#F2B134"/></g><g class="flower" transform="translate(1372,0)"><line x1="0" y1="168" x2="0" y2="160" stroke="#5E8C3A" stroke-width="2"/><circle cx="0" cy="158.5" r="3.2" fill="#E85D75"/></g><g class="flower" transform="translate(1396,0)"><line x1="0" y1="168" x2="0" y2="160" stroke="#5E8C3A" stroke-width="2"/><circle cx="0" cy="158.5" r="3.2" fill="#5B8FD0"/></g><g class="flower" transform="translate(1422,0)"><line x1="0" y1="168" x2="0" y2="160" stroke="#5E8C3A" stroke-width="2"/><circle cx="0" cy="158.5" r="3.2" fill="#F2B134"/></g><g class="flower" transform="translate(1446,0)"><line x1="0" y1="168" x2="0" y2="160" stroke="#5E8C3A" stroke-width="2"/><circle cx="0" cy="158.5" r="3.2" fill="#F28C28"/></g>
+          <g stroke="none"><g class="butterfly" transform="translate(940,172)" style="animation-delay:0s"><ellipse class="wing" cx="-5" cy="0" rx="6" ry="4" fill="#F28C28"/><ellipse class="wing" cx="5" cy="0" rx="6" ry="4" fill="#F2B134"/><line x1="0" y1="-5" x2="0" y2="5" stroke="#3B2A1A" stroke-width="2"/></g><g class="butterfly" transform="translate(1152,170)" style="animation-delay:2.5s"><ellipse class="wing" cx="-5" cy="0" rx="6" ry="4" fill="#5B8FD0"/><ellipse class="wing" cx="5" cy="0" rx="6" ry="4" fill="#B08BD0"/><line x1="0" y1="-5" x2="0" y2="5" stroke="#3B2A1A" stroke-width="2"/></g></g>
+        </g>
+      </svg>
+    </div>
     <div id="src-status" style="display:none">
       <div class="section" id="src-status-title" data-t="各狀態在途件數">各狀態在途件數</div>
       <div class="two"><div class="tbl" id="src-status-tbl"></div><div class="bars" id="src-status-chart"></div></div>
@@ -330,8 +447,8 @@
 <!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
 <script src="config.local.js" onerror="void 0"></script>
 <!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
-<script src="ui_strings.js?v=2026-10-10f"></script>
+<script src="ui_strings.js?v=2026-10-10h"></script>
 <!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
-<script src="app.js?v=2026-10-10f"></script>
+<script src="app.js?v=2026-10-10h"></script>
 </body>
 </html>

@@ -114,6 +114,19 @@ WEB_EN = {
     "請輸入分析起日": "Enter the analysis start date",
     "圖表套件載入中…": "Loading chart packages…",
     "圖表套件載入失敗，需要時會再試": "Chart packages failed to load; will retry when needed",
+    # ── 步驟進度
+    "啟動": "Startup",
+    "完成": "Done",
+    "失敗": "Failed",
+    "詳細記錄": "Details",
+    "下載瀏覽器版 Python": "Download the browser Python runtime",
+    "載入 pandas": "Load pandas",
+    "載入分析引擎": "Load the analysis engine",
+    "圖表與匯出套件（背景）": "Chart & export packages (background)",
+    "讀取 Excel": "Read the Excel file",
+    "整理資料": "Prepare the data",
+    "執行分析": "Run the analyses",
+    "零件明細": "Parse part lines",
     "準備中": "Starting",
     "就緒": "Ready",
     "啟動失敗": "Startup failed",
@@ -305,19 +318,20 @@ def _rep():
 def load(rows, start=None, progress=print):
     """rows：SheetJS sheet_to_json(header=1, cellDates=true) 的結果（list of list）。回傳 summary() 的 JSON 字串。"""
     rows = list(rows)
-    progress(L(f"整理 {len(rows):,} 列資料…", f"Preparing {len(rows):,} rows…"))
+    # progress(訊息, 階段, i, n)：階段給畫面的步驟動畫用（clean / analyze / parts）
+    progress(L(f"整理 {len(rows):,} 列資料…", f"Preparing {len(rows):,} rows…"), "clean")
     raw = pd.DataFrame(rows)
     df = E.clean_raw(raw)
-    progress(L(f"  共 {len(df):,} 列，欄位 {df.shape[1]} 個", f"  {len(df):,} rows, {df.shape[1]} columns"))
+    progress(L(f"  共 {len(df):,} 列，欄位 {df.shape[1]} 個", f"  {len(df):,} rows, {df.shape[1]} columns"), "clean")
     try:
         data = E.prepare(df, start or None)
     except KeyError as ex:   # 匯出檔少了欄位
         raise ValueError(T("缺少欄位：") + str(ex.args[0] if ex.args else ex)) from None
     ps, rd = data.attrs["period_start"], data.attrs["ref_date"]
     progress(L(f"  分析期間 {ps:%Y-%m-%d} 起，資料日期 {rd:%Y-%m-%d}，{len(data):,} 件",
-               f"  Period from {ps:%Y-%m-%d}, data as of {rd:%Y-%m-%d}, {len(data):,} cases"))
-    rep = E.run_all(data, progress=lambda i, n, t: progress(f"  [{i}/{n}] {t}"))
-    progress(L(f"  零件明細 {len(rep.parts):,} 顆", f"  {len(rep.parts):,} part lines"))
+               f"  Period from {ps:%Y-%m-%d}, data as of {rd:%Y-%m-%d}, {len(data):,} cases"), "clean")
+    rep = E.run_all(data, progress=lambda i, n, t: progress(f"  [{i}/{n}] {t}", "analyze", i, n))
+    progress(L(f"  零件明細 {len(rep.parts):,} 顆", f"  {len(rep.parts):,} part lines"), "parts")
     STATE["rep"], STATE["data"], STATE["charts"], STATE["tables"] = rep, data, {}, {}
     if STATE["chart_dir"] is None:
         STATE["chart_dir"] = tempfile.mkdtemp()
