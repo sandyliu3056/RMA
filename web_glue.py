@@ -93,6 +93,25 @@ WEB_EN = {
     "訂單檔沒有資料": "The PO file has no data rows",
     "請先載入 AIO 匯出檔": "Load an AIO export file first",
     "未知指令": "Unknown command",
+    # ── 標題列設定（縮放、字型、主題、時區）
+    "一般": "normal",
+    "手寫風": "Handwriting",
+    "正黑體": "Sans",
+    "等寬": "Mono",
+    "棕金": "Brown Gold",
+    "深藍": "Navy Blue",
+    "墨綠": "Forest Green",
+    "台北": "Taipei",
+    "曼谷": "Bangkok",
+    "雅加達": "Jakarta",
+    "馬尼拉": "Manila",
+    "河內": "Hanoi",
+    "吉隆坡": "Kuala Lumpur",
+    "新加坡": "Singapore",
+    "東京": "Tokyo",
+    "瀏覽器版（資料不離開這台電腦）": "Browser edition (your data never leaves this computer)",
+    "啟動中…": "Starting…",
+    "請輸入分析起日": "Enter the analysis start date",
 }
 
 

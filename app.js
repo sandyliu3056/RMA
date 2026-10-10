@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10";
+  const V = "2026-10-10b";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -32,9 +32,14 @@
   };
   let LANG = store.get("rma_lang") === "en" ? "en" : "zh";
   let UI = {};
+  // ui_strings.js（由 make_ui_strings.py 從 i18n.py 產生）：不必等 Python 啟動就有完整字典與名詞說明
+  const STATIC = (window.RMA_UI && window.RMA_UI.ui) || {};
+  const STATIC_GLOSS = (window.RMA_UI && window.RMA_UI.glossary) || {};
   function loadCachedUI() {
-    try { UI = JSON.parse(store.get("rma_ui_" + LANG) || "{}") || {}; } catch (e) { UI = {}; }
-    if (typeof UI !== "object" || Array.isArray(UI)) UI = {};
+    let cached = {};
+    try { cached = JSON.parse(store.get("rma_ui_" + LANG) || "{}") || {}; } catch (e) { cached = {}; }
+    if (typeof cached !== "object" || Array.isArray(cached)) cached = {};
+    UI = Object.assign({}, STATIC[LANG] || {}, cached);
   }
   loadCachedUI();
   const t = (k) => (typeof UI[k] === "string" ? UI[k] : k);
@@ -45,8 +50,12 @@
     document.title = t("售後零件規劃平台");
     document.querySelectorAll("[data-t]").forEach((el) => { el.textContent = t(el.dataset.t); });
     document.querySelectorAll("select[data-t-opts]").forEach((s) => { for (const o of s.options) o.textContent = t(o.value); });
-    document.querySelectorAll("#lang button").forEach((b) => b.classList.toggle("active", b.dataset.lang === LANG));
+    $("lang-sel").value = LANG;
+    for (const o of $("zoom-sel").options) o.textContent = o.value + "%" + (o.value === "100" ? " (" + t("一般") + ")" : "");
+    const tzo = $("tz-sel").selectedOptions[0];
+    $("tzname").textContent = tzo ? tzo.textContent : "";
   }
+  function setT(el, key) { el.dataset.t = key; el.textContent = t(key); }
 
   // ------------------------------------------------------------ worker
   const worker = new Worker("worker.js?v=" + V);
@@ -80,26 +89,29 @@
   async function onReady() {
     ready = true;
     try { await syncLang(); } catch (e) { toast(friendly(e), 8000); }
-    $("boot").innerHTML = esc(t("瀏覽器版 Python 已就緒，請選擇 AIO 匯出檔。"));
+    setT($("boot"), "瀏覽器版 Python 已就緒，請選擇 AIO 匯出檔。");
     $("aio").disabled = false; $("load").disabled = false;
   }
   async function syncLang() {
     // 告訴 Python 目前語言並取得介面字串（啟動後、切換語言時）
     const r = await call("set_lang", { lang: LANG });
-    UI = r.ui || {};
-    store.set("rma_ui_" + LANG, JSON.stringify(UI));
+    UI = Object.assign({}, STATIC[LANG] || {}, r.ui || {});
+    store.set("rma_ui_" + LANG, JSON.stringify(r.ui || {}));
     applyUI();
     return r;
   }
   async function switchLang(lang) {
     lang = lang === "en" ? "en" : "zh";
     if (lang === LANG) return;
-    if (switching) { toast(t("切換語言中…")); return; }
+    if (switching) { $("lang-sel").value = LANG; toast(t("切換語言中…")); return; }
     LANG = lang; store.set("rma_lang", lang);
     loadCachedUI(); applyUI(); renderActions();
-    if (!ready) return;   // 啟動完成時 onReady 會再同步
+    if (!ready) {   // 啟動中：先換介面字串；啟動完成時 onReady 會再與 Python 同步
+      worker.postMessage({ id: 0, cmd: "ui_lang", args: { lang } });
+      return;
+    }
     switching = true;
-    document.querySelectorAll("#lang button").forEach((b) => (b.disabled = true));
+    $("lang-sel").disabled = true;
     if (loaded) toast(t("切換語言中…"), 60000);
     try {
       await syncLang();
@@ -109,11 +121,11 @@
     } catch (e) { toast(friendly(e), 8000); }
     finally {
       switching = false;
-      document.querySelectorAll("#lang button").forEach((b) => (b.disabled = false));
+      $("lang-sel").disabled = false;
       if (loaded) $("toast").style.display = "none";
     }
   }
-  $("lang").addEventListener("click", (e) => { const b = e.target.closest("button[data-lang]"); if (b) switchLang(b.dataset.lang); });
+  $("lang-sel").addEventListener("change", (e) => switchLang(e.target.value));
 
   // ------------------------------------------------------------ 小工具
   let logTouched = false;
@@ -220,14 +232,31 @@
   function needData() { if (!loaded) { toast(t("請先在「資料來源」載入 AIO 匯出檔")); return false; } return true; }
   function dl(b64, name) { if (b64) downloadB64(b64, name, XLSX_MIME); else toast(t("（沒有資料）")); }
 
-  // ------------------------------------------------------------ 時鐘
+  // ------------------------------------------------------------ 標題列設定（縮放、字型、主題、時區）與時鐘
+  const PREFS = { zoom: "100", font: "hand", theme: "brown", tz: "Asia/Taipei" };
+  for (const k of Object.keys(PREFS)) { const v = store.get("rma_" + k); if (v) PREFS[k] = v; }
+  function applyPrefs() {
+    for (const k of Object.keys(PREFS)) {
+      const el = $(k + "-sel");
+      el.value = PREFS[k];
+      if (el.value !== PREFS[k]) { el.selectedIndex = 0; PREFS[k] = el.value; }   // 儲存的值已不存在就用第一個
+    }
+    document.documentElement.dataset.theme = PREFS.theme;
+    document.documentElement.dataset.font = PREFS.font;
+    document.body.style.zoom = String((+PREFS.zoom || 100) / 100);
+    const tzo = $("tz-sel").selectedOptions[0];
+    $("tzname").textContent = tzo ? tzo.textContent : "";
+    tick();
+  }
+  for (const k of Object.keys(PREFS)) $(k + "-sel").addEventListener("change", (e) => { PREFS[k] = e.target.value; store.set("rma_" + k, PREFS[k]); applyPrefs(); });
   function tick() {
     const now = new Date();
-    const tw = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+    let tw;
+    try { tw = new Date(now.toLocaleString("en-US", { timeZone: PREFS.tz })); } catch (e) { tw = now; }
     $("clock").textContent = `${p2(tw.getHours())}:${p2(tw.getMinutes())}`;
     $("date").textContent = `${tw.getFullYear()}/${p2(tw.getMonth() + 1)}/${p2(tw.getDate())} ${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][tw.getDay()]}`;
   }
-  tick(); setInterval(tick, 30000);
+  setInterval(tick, 30000);
 
   // ------------------------------------------------------------ 分頁
   const refreshers = { demand: refreshDemand, stock: refreshStock, ship: refreshShip, report: refreshReportList };
@@ -271,7 +300,7 @@
     const start = normDate($("start").value.trim());
     if (start === null) { toast(t("分析起日格式不對，請輸入像 2026-08-01 這樣的日期，或留空。"), 6000); return; }
     busy($("load"), true, t("分析中…"));
-    $("status").textContent = t("載入中…");
+    setT($("status"), "載入中…");
     try {
       const buffer = await f.arrayBuffer();
       const s = await call("load", { buffer, start }, [buffer]);
@@ -280,7 +309,7 @@
       log(t("完成。"));
     } catch (e) {
       log(t("錯誤：") + e.message); toast(t("載入失敗：") + friendly(e), 8000);
-      $("status").textContent = t("載入失敗");
+      setT($("status"), "載入失敗");
     } finally { busy($("load"), false); }
   });
 
@@ -432,9 +461,12 @@
 
   // ------------------------------------------------------------ 名詞說明
   $("gloss-btn").addEventListener("click", async () => {
-    if (!ready) { toast(t("瀏覽器版 Python 還在啟動")); return; }
     try {
-      const g = await call("glossary", {});
+      let g = STATIC_GLOSS[LANG];
+      if (!Array.isArray(g) || !g.length) {
+        if (!ready) { toast(t("瀏覽器版 Python 還在啟動")); return; }
+        g = await call("glossary", {});
+      }
       $("gloss-body").innerHTML = g.map(([n, d]) => `<dt>${esc(n)}</dt><dd>${esc(d)}</dd>`).join("");
       $("gloss").style.display = "flex";
     } catch (e) { toast(friendly(e)); }
@@ -550,6 +582,7 @@
 
   // ------------------------------------------------------------ 啟動
   applyUI();
+  applyPrefs();
   renderActions();
   call("boot", Object.assign({ lang: LANG }, CFG)).catch(bootFailed);
 })();

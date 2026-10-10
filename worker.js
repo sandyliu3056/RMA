@@ -116,6 +116,10 @@ self.onmessage = async (ev) => {
     if (cmd === "boot") {
       await boot(args);
       result = true;
+    } else if (cmd === "ui_lang") {
+      // 啟動中切換語言：後續的啟動訊息改用新語言
+      M = MSG[args && args.lang === "en" ? "en" : "zh"];
+      result = true;
     } else if (cmd === "load") {
       log(M.reading);
       const rows = readSheet(args.buffer, "AllInOneData");

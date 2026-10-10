@@ -8,7 +8,7 @@
 | `rma_engine.py` | 分析引擎。讀 AIO 匯出檔、清理、輔助欄位、11 項分析、零件明細解析，匯出 Excel／PNG／PPTX。可獨立以指令執行。 |
 | `i18n.py` | 語言字典與名詞定義。內部欄名一律中文，顯示時才轉成目前語言（中文模式套用白話用詞）。 |
 | `零件規劃平台.py` | 桌面程式（tkinter）。七個分頁對應工作架構的模組，所有數字來自引擎。 |
-| `index.html`、`app.js`、`worker.js`、`web_glue.py` | 瀏覽器版。用 Pyodide 把同一個引擎搬進瀏覽器執行。 |
+| `index.html`、`app.js`、`worker.js`、`web_glue.py`、`ui_strings.js` | 瀏覽器版。用 Pyodide 把同一個引擎搬進瀏覽器執行；`ui_strings.js` 由 `make_ui_strings.py` 從 `i18n.py` 產生。 |
 | `web_app.py` | Streamlit 版（需要能跑 Python 的主機），只有中文介面。 |
 
 ## 安裝（Python 版）
@@ -52,8 +52,9 @@ python rma_engine.py "0820-0921 AIO data.xlsx" 輸出資料夾 --lang en
 `index.html` + `app.js` + `worker.js` + `web_glue.py` 是純靜態的網頁版：用 Pyodide 把 Python 搬進瀏覽器，
 `rma_engine.py` 與 `i18n.py` 直接在使用者的瀏覽器裡執行，**AIO 檔案不會上傳到任何伺服器**。所以只要能放靜態檔案的地方都能架：Vercel、GitHub Pages、Netlify 都可以。
 
-- 右上角 **中文／English** 切換語言：表格、KPI、分析文字、匯出的 Excel／PPT 都會跟著換；選擇會記在瀏覽器裡。
-- **名詞說明** 列出全部名詞定義；欄名或 KPI 旁有 ⓘ 的，滑鼠停上去也會顯示。
+- 標題列的下拉選單：**中文／English**、縮放（90–125%）、字型（手寫風／正黑體／等寬）、主題（棕金／深藍／墨綠）、時區（時鐘顯示）。選擇都記在瀏覽器裡，下次開啟沿用。
+- 語言切換與 **名詞說明** 立即生效，不必等瀏覽器版 Python 啟動（介面字典預先產生在 `ui_strings.js`）；資料載入後切換語言，表格、KPI、分析文字、匯出的 Excel／PPT 會重新以該語言產生（幾秒）。
+- 欄名或 KPI 旁有 ⓘ 的，滑鼠停上去會顯示定義。
 - 出貨分頁「放超過 7 天有 10 件以上的維修站」與「保固已過期的在途案」以紅字標示，和桌面版相同。
 
 **部署到 Vercel（一次就好）**
@@ -69,7 +70,11 @@ GitHub Pages 也一樣能用：同一份檔案已經由 `.github/workflows/stati
 openpyxl、python-pptx 等純 Python 套件放在 `wheels/`，網頁自己載入，不連 PyPI。
 
 **本機試跑**：在這個資料夾執行 `python -m http.server 8000`，開 http://localhost:8000 。
-改了 `app.js`、`worker.js` 或 `.py` 之後，請一併改 `app.js` 開頭的 `V` 與 `index.html` 最後一行的 `app.js?v=`，使用者的瀏覽器才不會用舊快取。
+
+**改版時要記得的兩件事**
+
+- 改了 `i18n.py`（字典、名詞定義）或 `web_glue.py` 的 `WEB_EN` 之後，執行 `python make_ui_strings.py` 重新產生 `ui_strings.js` 並一起提交（`python make_ui_strings.py --check` 可檢查是否過期）。
+- 改了 `app.js`、`worker.js`、`ui_strings.js` 或 `.py` 之後，請一併改 `app.js` 開頭的 `V` 與 `index.html` 最後兩行的 `?v=`，使用者的瀏覽器才不會用舊快取。
 
 **和桌面版的差別**
 
