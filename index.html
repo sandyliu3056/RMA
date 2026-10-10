@@ -11,9 +11,9 @@
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Iansui&family=Comic+Neue:wght@400;700&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"></noscript>
 <style>
   /* 主題：標題列與表頭用 --navy、重點字用 --gold、分頁列 --tabbar、主要按鈕 --primary */
-  :root, html[data-theme="brown"] { --navy:#3B2A1A; --gold:#F2B134; --tabbar:#F5A623; --tab:#F8BE4A; --bg:#F3ECE0; --card:#FBF6EC; --panel:#FFFDF7; --line:#D9CBB6; --ink:#3B2A1A; --mute:#7A6652; --primary:#F2A93B; --hover:#FFD27A; --stripe:#F6EFE3; --sel:#4A3524; --selline:#A98B5A; --warn:#B5544C; --accent:#3B2A1A; --orange:#E8862B; }
-  html[data-theme="navy"] { --navy:#1F3F6E; --gold:#F5C95C; --tabbar:#2E6FBA; --tab:#6A9BD8; --bg:#EDF1F7; --card:#F8FAFD; --panel:#FFFFFF; --line:#C9D4E4; --ink:#1E2430; --mute:#5B6472; --primary:#F2B134; --hover:#FFD27A; --stripe:#F0F4F9; --sel:#2A4F82; --selline:#8FB0DB; --warn:#B5544C; --accent:#1F3F6E; --orange:#D9822B; }
-  html[data-theme="green"] { --navy:#1F3D2B; --gold:#E9C46A; --tabbar:#2E9E6B; --tab:#63B98E; --bg:#EEF4EF; --card:#F7FBF8; --panel:#FFFFFF; --line:#C6D8CC; --ink:#1E2A22; --mute:#5B6B60; --primary:#E9C46A; --hover:#F6DE9A; --stripe:#EFF6F1; --sel:#2B5239; --selline:#8FC2A4; --warn:#B5544C; --accent:#1F3D2B; --orange:#D9822B; }
+  :root, html[data-theme="brown"] { --navy:#3B2A1A; --gold:#F2B134; --tabbar:#F5A623; --tab:#F8BE4A; --bg:#F3ECE0; --card:#FBF6EC; --panel:#FFFDF7; --line:#D9CBB6; --ink:#3B2A1A; --mute:#7A6652; --primary:#F2A93B; --hover:#FFD27A; --stripe:#F6EFE3; --sel:#4A3524; --selline:#A98B5A; --warn:#B5544C; --accent:#3B2A1A; --orange:#E8862B; --sea:#DCE9F2; }
+  html[data-theme="navy"] { --navy:#1F3F6E; --gold:#F5C95C; --tabbar:#2E6FBA; --tab:#6A9BD8; --bg:#EDF1F7; --card:#F8FAFD; --panel:#FFFFFF; --line:#C9D4E4; --ink:#1E2430; --mute:#5B6472; --primary:#F2B134; --hover:#FFD27A; --stripe:#F0F4F9; --sel:#2A4F82; --selline:#8FB0DB; --warn:#B5544C; --accent:#1F3F6E; --orange:#D9822B; --sea:#D6E4F3; }
+  html[data-theme="green"] { --navy:#1F3D2B; --gold:#E9C46A; --tabbar:#2E9E6B; --tab:#63B98E; --bg:#EEF4EF; --card:#F7FBF8; --panel:#FFFFFF; --line:#C6D8CC; --ink:#1E2A22; --mute:#5B6B60; --primary:#E9C46A; --hover:#F6DE9A; --stripe:#EFF6F1; --sel:#2B5239; --selline:#8FC2A4; --warn:#B5544C; --accent:#1F3D2B; --orange:#D9822B; --sea:#D8E8EE; }
   /* 字型：手寫風（與參考設計相同的風格）、正黑體、等寬 */
   html[data-font="hand"] body { font-family:"Reprice Sketch","王漢宗標楷體空心","Sketch Block","芫荽","Iansui","LXGW WenKai TC","霞鶩文楷 TC","Segoe Print","Ink Free","Comic Neue","Comic Sans MS","Microsoft JhengHei",sans-serif; }
   html[data-font="sans"] body { font-family:"Microsoft JhengHei","Segoe UI","Noto Sans TC",sans-serif; }
@@ -152,6 +152,27 @@
   .logwrap summary { cursor:pointer; color:var(--mute); font-size:.82rem; }
   /* 場景動畫（canvas） */
   .sceneBox { margin:10px 0; line-height:0; }
+  /* 國旗（表格、圖例）與世界地圖 */
+  .flag { width:1.25em; height:.94em; vertical-align:-.1em; margin-right:.35em; border-radius:2px; box-shadow:0 0 0 1px rgba(0,0,0,.18); }
+  .map { border:2px solid var(--navy); border-radius:8px; background:var(--panel); padding:10px 12px 8px; }
+  .map-bar { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+  .map-bar .seg { display:inline-flex; gap:0; flex:none; }
+  .map-bar .seg .btn { font-size:.82rem; padding:4px 10px; border-radius:0; margin-left:-2px; }
+  .map-bar .seg .btn:first-child { border-radius:7px 0 0 7px; margin-left:0; }
+  .map-bar .seg .btn:last-child { border-radius:0 7px 7px 0; }
+  .map-bar .seg .btn.active { background:var(--gold); }
+  .map svg { width:100%; height:auto; display:block; border-radius:6px; border:1px solid var(--line); }
+  .map .sea { fill:var(--sea); }
+  .map path { fill:#FFFDF7; stroke:var(--line); }
+  .map path.has { stroke:var(--navy); }
+  .map path.has:hover { fill:var(--hover) !important; }
+  .map .pin rect { fill:#fff; stroke:var(--navy); }
+  .map line.lead { stroke:var(--navy); stroke-dasharray:3 2; opacity:.7; }
+  .map circle.lead { fill:var(--navy); opacity:.7; }
+  .map .pin text { font-family:inherit; font-weight:700; fill:var(--ink); paint-order:stroke; stroke:#fff; stroke-linejoin:round; }
+  .map .pin:hover rect { fill:var(--hover); }
+  .chips { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:8px; font-size:.85rem; }
+  .chips b { color:var(--ink); }
   #scene { width:100%; height:200px; display:block; cursor:pointer; }
   @keyframes pop { 0% { transform:scale(.4); } 70% { transform:scale(1.2); } 100% { transform:scale(1); } }
   @keyframes pulse { 50% { opacity:.55; } }
@@ -262,6 +283,15 @@
           <div class="row"><button class="btn" id="src-status-more" data-t="顯示原始狀態明細">顯示原始狀態明細</button><span class="small" id="src-status-hint"></span></div>
         </div>
         <div class="chart" id="src-status-chart"></div>
+      </div>
+    </div>
+    <div id="src-map" style="display:none">
+      <div class="section" id="src-map-title" data-t="各國案件分布">各國案件分布</div>
+      <div class="map">
+        <div class="map-bar"><span class="small" id="src-map-note"></span>
+          <span class="seg" id="src-map-view"><button class="btn active" data-view="fit" data-t="區域">區域</button><button class="btn" data-view="world" data-t="全世界">全世界</button></span></div>
+        <div id="src-map-svg"></div>
+        <div class="chips" id="src-map-chips"></div>
       </div>
     </div>
   </section>
@@ -398,9 +428,11 @@
 <!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
 <script src="config.local.js" onerror="void 0"></script>
 <!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
-<script src="ui_strings.js?v=2026-10-10s"></script>
+<script src="ui_strings.js?v=2026-10-10t"></script>
 <!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
-<script src="scene.js?v=2026-10-10s"></script>
-<script src="app.js?v=2026-10-10s"></script>
+<script src="scene.js?v=2026-10-10t"></script>
+<script src="countries.js?v=2026-10-10t"></script>
+<script src="world.js?v=2026-10-10t" defer></script>
+<script src="app.js?v=2026-10-10t"></script>
 </body>
 </html>

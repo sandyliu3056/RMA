@@ -35,6 +35,8 @@ SEEDS = {"1-2": "維修據點", "2-1": "維修據點", "2-2": "維修據點", "3
 
 # 欄名符合這個規則就以百分比顯示（與桌面版相同）
 PCT_RE = re.compile(r"(率|比例|占比|占在途|占保固外總數|累計占比)$")
+# 這些欄位的值是國家名稱：畫面上會在名字前面放國旗（flags/，對照表在 countries.js）
+FLAG_COLS = {"國家", "主要國家", "目的國", "Country"}
 
 # 網頁版才有的字串（i18n.py 沒有的）：英文模式的對照；中文模式直接用原字串
 WEB_EN = {
@@ -54,6 +56,11 @@ WEB_EN = {
     "1. 選擇 AIO 匯出檔（.xlsx，工作表 AllInOneData）\n2. 按「載入並分析」，第一次約 1 分鐘（分析在你的瀏覽器裡進行，檔案不會上傳到任何伺服器）\n3. 到各分頁查看，或在「報表與分析」下載 Excel／PPT":
         "1. Pick the AIO export file (.xlsx, sheet AllInOneData)\n2. Click \"Load & Analyze\" (about a minute the first time; everything runs in your browser and the file is never uploaded)\n3. Browse the tabs, or download Excel/PowerPoint from \"Reports & Analysis\"",
     "各狀態在途件數": "Open cases by status group",
+    "各國案件分布": "Cases by country",
+    "國旗下的數字是分析期間的案件數，顏色越深案件越多；滑鼠停在國旗或國家上，看在途與缺料件數。":
+        "The number under each flag is the cases created in the period; darker fill means more cases. Hover over a flag or country for open and waiting-on-parts counts.",
+    "區域": "Region",
+    "全世界": "World",
     "載入失敗：": "Load failed: ",
     "匯出失敗：": "Export failed: ",
     "匯入失敗：": "Import failed: ",
@@ -244,7 +251,7 @@ def df_json(df, index=True, pct=False, highlight=None, max_rows=2000, row_class=
     cls：row_class(列) 回傳的 CSS 類別（例如 "grp" 粗體分組列、"sub" 縮排子列）
     pct：整張表的資料欄都以百分比顯示（索引欄除外）。"""
     if df is None or len(df) == 0:
-        return {"columns": [], "defs": [], "rows": [], "numeric": [], "warn": [], "cls": [], "total": 0}
+        return {"columns": [], "defs": [], "rows": [], "numeric": [], "warn": [], "cls": [], "flags": [], "total": 0}
     d = df.reset_index() if index else df.reset_index(drop=True)
     d = _flat(d).rename(columns={"index": "項目"})
     raw_cols = [str(c) for c in d.columns]
@@ -274,7 +281,8 @@ def df_json(df, index=True, pct=False, highlight=None, max_rows=2000, row_class=
                 c = ""
         warn.append(w); cls.append(c)
     numeric = [k in ("pct", "int", "num") for k in kinds]
-    return {"columns": ids, "defs": defs, "rows": rows, "numeric": numeric, "warn": warn, "cls": cls, "total": int(len(shown))}
+    flags = [c in FLAG_COLS for c in raw_cols]
+    return {"columns": ids, "defs": defs, "rows": rows, "numeric": numeric, "warn": warn, "cls": cls, "flags": flags, "total": int(len(shown))}
 
 
 def _xlsx_raw(df):
@@ -426,8 +434,20 @@ def summary():
         "status_table": status_breakdown(d),
         "status_hint": tr("粗體列是狀態分組，底下是歸入該組的 AIO 原始狀態。"),
         "status_chart": status_chart(d),
+        "map": map_data(d),
         "analyses": [[a.key, E.title_part(a.title, -1)] for a in rep.analyses.values()],
     }
+
+
+def map_data(d):
+    """各國案件分布（世界地圖用）：期間案件數、在途、缺料，依案件數排序。name 是 AIO 的國家寫法（對照 countries.js）。"""
+    g = d.groupby("國家").agg(cases=("CaseID", "size"), open=("在途", "sum"), shortage=("缺料", "sum"))
+    g = g.sort_values("cases", ascending=False)
+    rows = [{"name": str(k), "label": T(str(k)), "cases": int(r.cases), "open": int(r.open), "shortage": int(r.shortage)}
+            for k, r in g.iterrows()]
+    return {"title": tr("各國案件分布"), "rows": rows,
+            "labels": {"cases": T("案件數"), "open": T("在途"), "shortage": T("缺料")},
+            "note": tr("國旗下的數字是分析期間的案件數，顏色越深案件越多；滑鼠停在國旗或國家上，看在途與缺料件數。")}
 
 
 def status_chart(d):
@@ -491,7 +511,9 @@ def tab_stock(days=14):
     rep = _rep()
     k = rep.get("4-2").kpis
     days = max(1, min(int(days), 60))
-    sp = E.shortage_parts(rep.parts)
+    sp = E.shortage_parts(rep.parts).copy()
+    # 國家欄只留名字（引擎會附上各國顆數，例如「Indonesia (128)」；畫面改用國旗，數字拿掉）
+    sp["國家"] = sp["國家"].astype(str).str.replace(r"\s*\(\d+\)|(?<=\D)\d+(?=\s*(?:、|,|;|$))", "", regex=True)
     sc = E.shortage_cases(rep.data, days)
     med = _f(k.get("等待中位數"))
     return {"kpis": [kpi("缺料案件", kv(k["缺料件數"], k["缺料占在途"])),

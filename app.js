@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10s";
+  const V = "2026-10-10t";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -221,6 +221,11 @@
     else { btn.textContent = btn.dataset.t ? t(btn.dataset.t) : (btn.dataset.label || btn.textContent); btn.disabled = false; }
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  // 國旗：countries.js 的對照表（AIO 的國家寫法 → ISO 代碼、座標）；查不到的名字就不加旗子
+  const COUNTRIES = window.RMA_COUNTRIES || {};
+  function flagImg(name) { const c = COUNTRIES[String(name).trim()]; return c ? `<img class="flag" src="flags/${c.iso2}.svg" alt="" loading="lazy">` : ""; }
+  // 文字裡的國家名稱（可能是「Indonesia、Thailand」這種清單）：每個名字前面加國旗
+  function flagify(s) { return String(s).split(/(、|,\s*|;\s*)/).map((p, i) => (i % 2 ? esc(p) : flagImg(p) + esc(p))).join(""); }
   function friendly(e) {
     // 把 Pyodide／網路錯誤換成看得懂的一句話
     const m = (e && e.message) ? e.message : String(e);
@@ -258,12 +263,12 @@
     const n = Math.min(tj.rows.length, maxRows || 2000);
     let h = "<table><thead><tr>" + tj.columns.map((c, i) => {
       const d = tj.defs && tj.defs[i];
-      return `<th class="${tj.numeric[i] ? "num" : ""}"${d ? ` title="${esc(d)}"` : ""}>${esc(c)}${d ? ' <span class="info">ⓘ</span>' : ""}</th>`;
+      return `<th class="${tj.numeric[i] ? "num" : ""}"${d ? ` title="${esc(d)}"` : ""}>${flagImg(c)}${esc(c)}${d ? ' <span class="info">ⓘ</span>' : ""}</th>`;
     }).join("") + "</tr></thead><tbody>";
     for (let r = 0; r < n; r++) {
       const row = tj.rows[r];
       const cls = ((tj.warn && tj.warn[r]) ? "warn " : "") + ((tj.cls && tj.cls[r]) || "");
-      h += `<tr${cls.trim() ? ` class="${esc(cls.trim())}"` : ""}>` + row.map((v, i) => `<td class="${tj.numeric[i] ? "num" : ""}">${esc(v)}</td>`).join("") + "</tr>";
+      h += `<tr${cls.trim() ? ` class="${esc(cls.trim())}"` : ""}>` + row.map((v, i) => `<td class="${tj.numeric[i] ? "num" : ""}">${tj.flags && tj.flags[i] ? flagify(v) : esc(v)}</td>`).join("") + "</tr>";
     }
     h += "</tbody></table>";
     const total = tj.total || tj.rows.length;
@@ -279,7 +284,7 @@
     const max = Math.max(1, ...values);
     const m = meta || {};
     el.innerHTML = (m.title ? `<div class="ch-title">${esc(m.title)}${m.ylabel ? ` <span class="ch-unit">(${esc(m.ylabel)})</span>` : ""}</div>` : "") +
-      `<div class="bars">` + labels.map((l, i) => `<div class="b"><b>${values[i].toLocaleString()}</b><i style="height:${Math.round(values[i] / max * 150)}px" title="${esc(l)}：${values[i].toLocaleString()}"></i><span title="${esc(l)}">${esc(l)}</span></div>`).join("") + `</div>` +
+      `<div class="bars">` + labels.map((l, i) => `<div class="b"><b>${values[i].toLocaleString()}</b><i style="height:${Math.round(values[i] / max * 150)}px" title="${esc(l)}：${values[i].toLocaleString()}"></i><span title="${esc(l)}">${flagImg(l)}${esc(l)}</span></div>`).join("") + `</div>` +
       (m.note ? `<div class="ch-note">${esc(m.note)}</div>` : "");
   }
   const SEG_COLORS = ["#2E6FBA", "#D9822B", "#2E9E6B", "#8E4FB5", "#C9A227", "#4FB0C6", "#B5544C", "#6B7280", "#7FA650", "#C77DB5", "#5B8FD0", "#E8862B"];
@@ -304,7 +309,7 @@
     const totals = c.totals || c.labels.map((_, i) => c.series.reduce((s, x) => s + (x.values[i] || 0), 0));
     const max = Math.max(1, ...totals);
     let h = `<div class="ch-title">${esc(c.title || "")}${c.ylabel ? ` <span class="ch-unit">(${esc(c.ylabel)})</span>` : ""}</div>`;
-    h += `<div class="hb-legend">${c.series.map((s) => `<span><i style="background:${esc(s.color)}"></i>${esc(s.name)}</span>`).join("")}</div>`;
+    h += `<div class="hb-legend">${c.series.map((s) => `<span><i style="background:${esc(s.color)}"></i>${flagImg(s.name)}${esc(s.name)}</span>`).join("")}</div>`;
     h += `<div class="bars">` + c.labels.map((l, i) => {
       // 第一個數列在最下面：由上往下排，所以反轉順序
       const segs = c.series.slice().reverse().map((s) => { const v = s.values[i] || 0; return v ? `<i style="height:${v / max * 150}px;background:${esc(s.color)}" title="${esc(s.name)}：${Math.round(v).toLocaleString()}"></i>` : ""; }).join("");
@@ -320,9 +325,9 @@
     if (!c || !c.labels || !c.labels.length) { el.innerHTML = `<div class="caption">${esc(t("（沒有資料）"))}</div>`; return; }
     const totals = c.labels.map((_, i) => c.series.reduce((s, x) => s + (x.values[i] || 0), 0));
     const max = Math.max(1, ...totals);
-    let h = `<div class="hb-title">${esc(c.title)}</div><div class="hb-legend">${c.series.map((s) => `<span><i style="background:${esc(s.color)}"></i>${esc(s.name)}</span>`).join("")}</div>`;
+    let h = `<div class="hb-title">${esc(c.title)}</div><div class="hb-legend">${c.series.map((s) => `<span><i style="background:${esc(s.color)}"></i>${flagImg(s.name)}${esc(s.name)}</span>`).join("")}</div>`;
     c.labels.forEach((l, i) => {
-      h += `<div class="hb-row"><span class="hb-lab" title="${esc(l)}">${esc(l)}</span><span class="hb-bar">` +
+      h += `<div class="hb-row"><span class="hb-lab" title="${esc(l)}">${flagImg(l)}${esc(l)}</span><span class="hb-bar">` +
         c.series.map((s) => {
           const v = s.values[i] || 0; if (!v) return "";
           const w = v / max * 100;
@@ -332,6 +337,77 @@
     el.innerHTML = h;
     el.querySelectorAll(".hb-bar i").forEach((seg) => { if (seg.scrollWidth > seg.clientWidth) seg.textContent = ""; });
   }
+  // ------------------------------------------------------------ 世界地圖（各國案件分布）
+  // world.js：各國輪廓（等距圓柱投影到 1000×500）；countries.js：名稱 → ISO 代碼與中心座標
+  const MAP_FILLS = ["#FBE7C6", "#F6CF86", "#F2B134", "#E8862B", "#B5544C"];
+  let mapData = null, mapView = "fit";
+  const project = (c) => [(c.lon + 180) / 360 * 1000, (90 - c.lat) / 180 * 500];
+  function renderMap(el, m) {
+    const W = window.RMA_WORLD;
+    const rows = (m && m.rows || []).filter((r) => COUNTRIES[r.name]);
+    if (!W || !rows.length) { el.innerHTML = `<div class="caption pad">${esc(t("（沒有資料）"))}</div>`; return; }
+    // 視窗：fit = 剛好框住有資料的國家（留邊，至少 250×125，維持 2:1）；world = 全世界
+    let vb = { x: 0, y: 0, w: 1000, h: 500 };
+    if (mapView === "fit") {
+      const pts = rows.map((r) => project(COUNTRIES[r.name]));
+      const x0 = Math.min(...pts.map((p) => p[0])) - 45, x1 = Math.max(...pts.map((p) => p[0])) + 45;
+      const y0 = Math.min(...pts.map((p) => p[1])) - 35, y1 = Math.max(...pts.map((p) => p[1])) + 35;
+      let w = Math.max(250, x1 - x0), h = Math.max(125, y1 - y0);
+      if (w / h > 2) h = w / 2; else w = h * 2;
+      vb = { x: Math.max(0, Math.min(1000 - w, (x0 + x1) / 2 - w / 2)), y: Math.max(0, Math.min(500 - h, (y0 + y1) / 2 - h / 2)), w, h };
+    }
+    const u = vb.w / 900;   // 一個畫面像素約等於幾個地圖單位（旗子、字的大小用）
+    const max = Math.max(1, ...rows.map((r) => r.cases));
+    const lab = m.labels || {};
+    const tip = (r) => `${r.label}\n${lab.cases || ""} ${r.cases.toLocaleString()}\n${lab.open || ""} ${r.open.toLocaleString()}\n${lab.shortage || ""} ${r.shortage.toLocaleString()}`;
+    const byIso = {};
+    for (const r of rows) byIso[COUNTRIES[r.name].iso3] = r;
+    let h = `<svg viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" preserveAspectRatio="xMidYMid meet" role="img"><rect x="0" y="0" width="1000" height="500" class="sea"/><g stroke-width="${0.6 * u}">`;
+    for (const [iso, d] of Object.entries(W.paths)) {
+      const r = byIso[iso];
+      if (!r) { h += `<path d="${d}"><title>${esc(W.names[iso] || iso)}</title></path>`; continue; }
+      const lvl = Math.min(4, Math.round(Math.sqrt(r.cases / max) * 4));
+      h += `<path d="${d}" class="has" style="fill:${MAP_FILLS[lvl]}"><title>${esc(tip(r))}</title></path>`;
+    }
+    h += `</g>`;
+    // 旗子＋件數：先放在國家中心；擠在一起的互相推開（算上旗框與數字的高度），推開的用細線指回原來的位置
+    const fw = 26 * u, fh = fw * 0.75, pad = 2 * u;
+    const bw = fw + 2 * pad + 4 * u, bh = fh + 2 * pad + 15 * u;
+    const pins = rows.map((r) => { const [x, y] = project(COUNTRIES[r.name]); return { r, x0: x, y0: y, x, y }; });
+    for (let it = 0; it < 80; it++) {
+      let moved = false;
+      for (let i = 0; i < pins.length; i++) for (let j = i + 1; j < pins.length; j++) {
+        const a = pins[i], b = pins[j];
+        const dx = b.x - a.x, dy = b.y - a.y, ox = bw - Math.abs(dx), oy = bh - Math.abs(dy);
+        if (ox <= 0 || oy <= 0) continue;
+        moved = true;
+        if (ox < oy) { const s = (ox / 2 + u) * (dx < 0 ? -1 : 1); a.x -= s; b.x += s; }
+        else { const s = (oy / 2 + u) * (dy < 0 ? -1 : 1); a.y -= s; b.y += s; }
+      }
+      if (!moved) break;
+    }
+    for (const p of pins) {
+      if (Math.hypot(p.x - p.x0, p.y - p.y0) > 4 * u) h += `<line class="lead" x1="${p.x0.toFixed(1)}" y1="${p.y0.toFixed(1)}" x2="${p.x.toFixed(1)}" y2="${p.y.toFixed(1)}" stroke-width="${1.2 * u}"/><circle class="lead" cx="${p.x0.toFixed(1)}" cy="${p.y0.toFixed(1)}" r="${2 * u}"/>`;
+    }
+    // 案件少的最後畫（在上層），才不會被大國的旗子蓋住
+    for (const p of pins.slice().reverse()) {
+      const r = p.r;
+      h += `<g class="pin" transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})"><title>${esc(tip(r))}</title>` +
+        `<rect x="${-fw / 2 - pad}" y="${-fh / 2 - pad}" width="${fw + 2 * pad}" height="${fh + 2 * pad}" rx="${2 * u}" stroke-width="${u}"/>` +
+        `<image href="flags/${COUNTRIES[r.name].iso2}.svg" x="${-fw / 2}" y="${-fh / 2}" width="${fw}" height="${fh}"/>` +
+        `<text y="${fh / 2 + 12 * u}" font-size="${11 * u}" text-anchor="middle" stroke-width="${3 * u}">${r.cases.toLocaleString()}</text></g>`;
+    }
+    el.innerHTML = h + `</svg>`;
+  }
+  function renderMapChips(el, m) {
+    // 地圖下方：每個國家一個小標籤（國旗、名稱、件數），沒有座標的國家（例如「未填」）也列在這裡
+    el.innerHTML = (m && m.rows || []).map((r) => `<span title="${esc(r.label)}">${flagImg(r.name)}${esc(r.label)} <b>${r.cases.toLocaleString()}</b></span>`).join("");
+  }
+  document.querySelectorAll("#src-map-view button").forEach((b) => b.addEventListener("click", () => {
+    mapView = b.dataset.view;
+    document.querySelectorAll("#src-map-view button").forEach((x) => x.classList.toggle("active", x === b));
+    if (mapData) renderMap($("src-map-svg"), mapData);
+  }));
   function downloadB64(b64, name, mime) {
     const bin = atob(b64), buf = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
@@ -418,6 +494,13 @@
     renderTable($("src-status-tbl"), { columns: [full.columns[0], full.columns[2]], defs: [full.defs[0], full.defs[2]], numeric: [full.numeric[0], full.numeric[2]],
                                         rows: gi.map((r) => [full.rows[r][0], full.rows[r][2]]), warn: gi.map(() => false), cls: gi.map(() => ""), total: gi.length });
     renderHStack($("src-status-chart"), s.status_chart);
+    mapData = s.map || null;
+    $("src-map").style.display = mapData && mapData.rows.length ? "block" : "none";
+    if (mapData) {
+      $("src-map-title").textContent = mapData.title; $("src-map-title").removeAttribute("data-t");
+      $("src-map-note").textContent = mapData.note || "";
+      renderMap($("src-map-svg"), mapData); renderMapChips($("src-map-chips"), mapData);
+    }
     analyses = s.analyses || [];
   }
   $("load").addEventListener("click", async () => {
