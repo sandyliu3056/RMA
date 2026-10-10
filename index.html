@@ -6,22 +6,25 @@
 <title>售後零件規劃平台</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<!-- 網頁字型不阻擋顯示：載入完成前先用系統字型 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"></noscript>
 <style>
   /* 主題：標題列與表頭用 --navy、重點字用 --gold、分頁列 --tabbar、主要按鈕 --primary */
   :root, html[data-theme="brown"] { --navy:#3B2A1A; --gold:#F2B134; --tabbar:#F5A623; --tab:#F8BE4A; --bg:#F3ECE0; --card:#FBF6EC; --panel:#FFFDF7; --line:#D9CBB6; --ink:#3B2A1A; --mute:#7A6652; --primary:#F2A93B; --hover:#FFD27A; --stripe:#F6EFE3; --sel:#4A3524; --selline:#A98B5A; --warn:#B5544C; --accent:#E8862B; }
   html[data-theme="navy"] { --navy:#1F3F6E; --gold:#F5C95C; --tabbar:#2E6FBA; --tab:#6A9BD8; --bg:#EDF1F7; --card:#F8FAFD; --panel:#FFFFFF; --line:#C9D4E4; --ink:#1E2430; --mute:#5B6472; --primary:#F2B134; --hover:#FFD27A; --stripe:#F0F4F9; --sel:#2A4F82; --selline:#8FB0DB; --warn:#B5544C; --accent:#D9822B; }
   html[data-theme="green"] { --navy:#1F3D2B; --gold:#E9C46A; --tabbar:#2E9E6B; --tab:#63B98E; --bg:#EEF4EF; --card:#F7FBF8; --panel:#FFFFFF; --line:#C6D8CC; --ink:#1E2A22; --mute:#5B6B60; --primary:#E9C46A; --hover:#F6DE9A; --stripe:#EFF6F1; --sel:#2B5239; --selline:#8FC2A4; --warn:#B5544C; --accent:#D9822B; }
   /* 字型：手寫風（與參考設計相同的風格）、正黑體、等寬 */
-  html[data-font="hand"] body { font-family:"Comic Neue","LXGW WenKai TC","Microsoft JhengHei","Noto Sans TC",sans-serif; }
+  html[data-font="hand"] body { font-family:"Comic Neue","Comic Sans MS","Segoe Print","LXGW WenKai TC","Microsoft JhengHei","Noto Sans TC",sans-serif; }
   html[data-font="sans"] body { font-family:"Microsoft JhengHei","Segoe UI","Noto Sans TC",sans-serif; }
   html[data-font="mono"] body { font-family:Consolas,"Cascadia Mono","Noto Sans Mono CJK TC","Microsoft JhengHei",monospace; }
   * { box-sizing:border-box; }
   html, body { margin:0; background:var(--bg); color:var(--ink); font-size:14px; line-height:1.55; }
   /* 標題列（全寬、深色） */
   .hdr { background:var(--navy); color:var(--gold); padding:10px 22px; display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; }
-  .hdr h1 { margin:0; font-size:1.55rem; letter-spacing:.12em; font-weight:700; }
-  .hdr .sub { color:#D9C7A8; font-size:.82rem; }
+  .hdr .brand { min-width:0; max-width:100%; }
+  .hdr h1 { margin:0; font-size:1.55rem; letter-spacing:.12em; font-weight:700; text-transform:uppercase; }
+  .hdr .sub { color:#D9C7A8; font-size:.82rem; overflow-wrap:anywhere; }
   .hdr .ctl { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .hdr select { background:var(--sel); color:var(--gold); border:1px solid var(--selline); border-radius:6px; padding:3px 6px; font-family:inherit; font-size:.82rem; cursor:pointer; }
   .hdr .clock { text-align:right; white-space:nowrap; margin:0 8px; }
@@ -41,10 +44,12 @@
   .hbtn { background:transparent; color:var(--gold); border:1px solid var(--selline); border-radius:6px; padding:4px 10px; font-family:inherit; font-size:.85rem; font-weight:700; cursor:pointer; }
   .hbtn:hover { background:var(--sel); }
   /* 分頁列（金色長條＋圓角分頁，選中的分頁與下方卡片相連） */
-  .tabs { display:flex; flex-wrap:wrap; gap:4px; background:var(--tabbar); padding:7px 10px 0; }
-  .tabs button { display:flex; align-items:center; gap:6px; background:var(--tab); color:var(--ink); border:2px solid var(--navy); border-bottom:0; border-radius:9px 9px 0 0; padding:6px 14px 7px; margin-bottom:-2px; font-weight:700; font-family:inherit; font-size:.95rem; cursor:pointer; position:relative; }
+  .tabs { display:flex; flex-wrap:wrap; gap:4px; background:var(--tabbar); padding:7px 8px 0; }
+  .tabs button { display:flex; align-items:center; gap:6px; background:var(--tab); color:var(--ink); border:2px solid var(--navy); border-radius:9px 9px 0 0; padding:6px 14px 7px; margin-bottom:0; font-weight:700; font-family:inherit; font-size:.95rem; cursor:pointer; position:relative; }
   .tabs button:hover { background:var(--hover); }
-  .tabs button.active { background:var(--card); z-index:2; box-shadow:0 2px 0 var(--card); }
+  .tabs button.active { background:var(--card); border-bottom-color:var(--card); z-index:2; margin-bottom:-2px; }
+  @media (max-width:1350px) { .tabs button { padding:5px 10px 6px; font-size:.88rem; gap:4px; } }
+  @media (max-width:1100px) { .tabs .ico { display:none; } }
   .tabs .ico { font-size:.95rem; }
   .card { margin:0 8px 28px; background:var(--card); border:2px solid var(--navy); border-radius:0 12px 12px 12px; padding:14px 18px 20px; box-shadow:0 8px 18px rgba(0,0,0,.14); min-height:420px; }
   .tab { display:none; }
@@ -78,9 +83,11 @@
   td { padding:6px 10px; border-bottom:1px solid #EFE6D8; white-space:nowrap; }
   tr:nth-child(even) td { background:var(--stripe); }
   tr.warn td { color:var(--warn); font-weight:700; }
+  tr.warn input, tr.warn select { color:var(--warn); font-weight:700; }
   td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
   td.topic input { width:100%; min-width:280px; }
   .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .two > *, .report > *, .rbody > * { min-width:0; }
   @media (max-width:900px) { .two { grid-template-columns:1fr; } }
   .bars { display:flex; align-items:flex-end; gap:12px; height:220px; padding:10px 8px 0; border:2px solid var(--navy); border-radius:8px; background:var(--panel); overflow-x:auto; }
   .bars .b { flex:1; min-width:46px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; font-size:.78rem; color:var(--mute); }
@@ -92,10 +99,11 @@
   .hb-title { font-weight:700; color:var(--ink); margin-bottom:2px; }
   .hb-legend { display:flex; gap:14px; font-size:.8rem; color:var(--mute); margin-bottom:8px; flex-wrap:wrap; }
   .hb-legend i { display:inline-block; width:10px; height:10px; margin-right:5px; border-radius:2px; vertical-align:-1px; }
-  .hb-row { display:grid; grid-template-columns:minmax(90px, 32%) 1fr 56px; gap:8px; align-items:center; margin:3px 0; font-size:.8rem; }
+  .hb-row { display:grid; grid-template-columns:fit-content(45%) 1fr 56px; gap:8px; align-items:center; margin:3px 0; font-size:.8rem; }
   .hb-lab { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right; }
   .hb-bar { display:flex; height:18px; }
-  .hb-bar i { display:block; height:100%; color:#fff; font-size:.75rem; line-height:18px; text-align:center; overflow:hidden; white-space:nowrap; }
+  .hb-bar i { display:block; height:100%; color:#fff; font-size:.75rem; font-style:normal; line-height:18px; text-align:center; overflow:hidden; white-space:nowrap; }
+  .hb-legend i { font-style:normal; }
   .hb-bar i.dark { color:var(--navy); }
   .hb-row b { color:var(--mute); font-weight:400; }
   .log { background:var(--panel); border:2px solid var(--navy); border-radius:8px; padding:10px 12px; font-family:Consolas, monospace; font-size:.82rem; height:200px; overflow:auto; white-space:pre-wrap; }
@@ -118,11 +126,11 @@
   .concl { background:#FFF1D6; border:1.5px solid #E0B86A; padding:6px 10px; border-radius:6px; }
   html[data-theme="navy"] .concl, html[data-theme="green"] .concl { background:var(--stripe); border-color:var(--line); }
   .stack { display:flex; flex-direction:column; gap:8px; }
-  .toast { position:fixed; right:16px; bottom:16px; background:var(--navy); color:#fff; padding:10px 16px; border-radius:8px; max-width:420px; font-size:.9rem; display:none; z-index:9; white-space:pre-wrap; }
+  .toast { position:fixed; right:16px; bottom:16px; background:var(--navy); color:#fff; padding:10px 16px; border-radius:8px; max-width:min(420px, calc(100vw - 32px)); font-size:.9rem; display:none; z-index:9; white-space:pre-wrap; }
   .small { font-size:.82rem; color:var(--mute); }
   /* 名詞說明 */
   .modal { position:fixed; inset:0; background:rgba(59,42,26,.45); display:none; align-items:center; justify-content:center; z-index:20; padding:16px; }
-  .modal-box { background:var(--card); border:2px solid var(--navy); border-radius:12px; max-width:760px; width:100%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,.25); }
+  .modal-box { background:var(--card); border:2px solid var(--navy); border-radius:12px; max-width:760px; width:100%; max-height:100%; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,.25); }
   .modal-box header { display:flex; justify-content:space-between; align-items:center; padding:10px 18px; background:var(--navy); color:var(--gold); border-radius:9px 9px 0 0; font-weight:700; font-size:1.05rem; }
   .modal-box header button { background:none; border:0; font-size:1.2rem; cursor:pointer; color:var(--gold); }
   .modal-box .caption { padding:8px 18px 0; }
@@ -312,18 +320,18 @@
   </main>
 
 <div class="modal" id="gloss">
-  <div class="modal-box">
-    <header><span data-t="名詞說明">名詞說明</span><button id="gloss-close" aria-label="close">✕</button></header>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="gloss-title">
+    <header><span id="gloss-title" data-t="名詞說明">名詞說明</span><button id="gloss-close" aria-label="close">✕</button></header>
     <div class="caption" data-t="畫面上標有 ⓘ 的欄位或指標，滑鼠停在上面也會顯示說明。">畫面上標有 ⓘ 的欄位或指標，滑鼠停在上面也會顯示說明。</div>
-    <dl class="modal-body" id="gloss-body"></dl>
+    <dl class="modal-body" id="gloss-body" tabindex="0"></dl>
   </div>
 </div>
 <div class="toast" id="toast"></div>
 <!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
 <script src="config.local.js" onerror="void 0"></script>
 <!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
-<script src="ui_strings.js?v=2026-10-10c"></script>
+<script src="ui_strings.js?v=2026-10-10e"></script>
 <!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
-<script src="app.js?v=2026-10-10c"></script>
+<script src="app.js?v=2026-10-10e"></script>
 </body>
 </html>

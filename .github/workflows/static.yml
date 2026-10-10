@@ -4,7 +4,7 @@ name: Deploy static content to Pages
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: ["claude/funny-gauss-h7fxud"]
+    branches: ["main", "claude/funny-gauss-h7fxud"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:

@@ -43,7 +43,7 @@ function log(msg) { self.postMessage({ type: "log", msg }); }
 function progress(pct, msg) { self.postMessage({ type: "progress", pct, msg }); if (msg) log(msg); }
 
 async function fetchText(url) {
-  const r = await fetch(url, { cache: "no-cache" });
+  const r = await fetch(url);
   if (!r.ok) throw new Error(fmt(M.fetchFail, url, r.status));
   return await r.text();
 }

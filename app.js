@@ -5,14 +5,14 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10c";
+  const V = "2026-10-10e";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
     engineUrl: "rma_engine.py?v=" + V,
     glueUrl: "web_glue.py?v=" + V,
     i18nUrl: "i18n.py?v=" + V,
-    fonts: ["fonts/NotoSansTC-Regular.otf"],
+    fonts: ["fonts/NotoSansTC-Regular.otf?v=" + V],
     // openpyxl、python-pptx 與相依套件：網站自帶的 wheel 檔（不連 PyPI）；本機測試可在 config.local.js 改來源
     wheels: ["wheels/et_xmlfile-2.0.0-py3-none-any.whl", "wheels/openpyxl-3.1.5-py2.py3-none-any.whl",
              "wheels/python_pptx-1.0.2-py3-none-any.whl", "wheels/typing_extensions-4.16.0-py3-none-any.whl",
@@ -36,10 +36,8 @@
   const STATIC = (window.RMA_UI && window.RMA_UI.ui) || {};
   const STATIC_GLOSS = (window.RMA_UI && window.RMA_UI.glossary) || {};
   function loadCachedUI() {
-    let cached = {};
-    try { cached = JSON.parse(store.get("rma_ui_" + LANG) || "{}") || {}; } catch (e) { cached = {}; }
-    if (typeof cached !== "object" || Array.isArray(cached)) cached = {};
-    UI = Object.assign({}, STATIC[LANG] || {}, cached);
+    // 靜態字典與這次部署的 Python 同一份；舊部署留在 localStorage 的快取不再使用
+    UI = Object.assign({}, STATIC[LANG] || {});
   }
   loadCachedUI();
   const t = (k) => (typeof UI[k] === "string" ? UI[k] : k);
@@ -111,7 +109,6 @@
     // 告訴 Python 目前語言並取得介面字串（啟動後、切換語言時）
     const r = await call("set_lang", { lang: LANG });
     UI = Object.assign({}, STATIC[LANG] || {}, r.ui || {});
-    store.set("rma_ui_" + LANG, JSON.stringify(r.ui || {}));
     applyUI();
     return r;
   }
@@ -121,10 +118,8 @@
     if (switching) { $("lang-sel").value = LANG; toast(t("切換語言中…")); return; }
     LANG = lang; store.set("rma_lang", lang);
     loadCachedUI(); applyUI(); renderActions();
-    if (!ready) {   // 啟動中：先換介面字串；啟動完成時 onReady 會再與 Python 同步
-      worker.postMessage({ id: 0, cmd: "ui_lang", args: { lang } });
-      return;
-    }
+    worker.postMessage({ id: 0, cmd: "ui_lang", args: { lang } });   // worker 自己的進度訊息也換語言
+    if (!ready) return;   // 啟動中：先換介面字串；啟動完成時 onReady 會再與 Python 同步
     switching = true;
     $("lang-sel").disabled = true;
     if (loaded) toast(t("切換語言中…"), 60000);
@@ -164,7 +159,7 @@
   function friendly(e) {
     // 把 Pyodide／網路錯誤換成看得懂的一句話
     const m = (e && e.message) ? e.message : String(e);
-    if (/Failed to fetch|NetworkError|importScripts|ERR_|Load failed|network/i.test(m)) return t("下載瀏覽器版 Python 失敗，請檢查網路後重新整理頁面。");
+    if (/Failed to fetch|NetworkError when|importScripts|net::ERR_|Load failed/.test(m)) return t("下載瀏覽器版 Python 失敗，請檢查網路後重新整理頁面。");
     if (/out of memory|allocation failed|RangeError|Aborted\(/i.test(m)) return t("記憶體不足，請關閉其他分頁後重試。");
     const lines = m.trim().split("\n");
     return lines[lines.length - 1].replace(/^[A-Za-z_.]*(Error|Exception):\s*/, "");
@@ -232,6 +227,7 @@
         }).join("") + `</span><b>${totals[i].toLocaleString()}</b></div>`;
     });
     el.innerHTML = h;
+    el.querySelectorAll(".hb-bar i").forEach((seg) => { if (seg.scrollWidth > seg.clientWidth) seg.textContent = ""; });
   }
   function downloadB64(b64, name, mime) {
     const bin = atob(b64), buf = new Uint8Array(bin.length);
@@ -483,11 +479,13 @@
       }
       $("gloss-body").innerHTML = g.map(([n, d]) => `<dt>${esc(n)}</dt><dd>${esc(d)}</dd>`).join("");
       $("gloss").style.display = "flex";
+      $("gloss-body").scrollTop = 0; $("gloss-body").focus();
     } catch (e) { toast(friendly(e)); }
   });
-  $("gloss-close").addEventListener("click", () => ($("gloss").style.display = "none"));
-  $("gloss").addEventListener("click", (e) => { if (e.target === $("gloss")) $("gloss").style.display = "none"; });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("gloss").style.display = "none"; });
+  function closeGloss() { if ($("gloss").style.display === "none") return; $("gloss").style.display = "none"; $("gloss-btn").focus(); }
+  $("gloss-close").addEventListener("click", closeGloss);
+  $("gloss").addEventListener("click", (e) => { if (e.target === $("gloss")) closeGloss(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeGloss(); });
 
   // ------------------------------------------------------------ 跨單位協調（存在 localStorage，欄位名稱與桌面版的 協調待辦.json 相同）
   const KEY = "rma_actions";

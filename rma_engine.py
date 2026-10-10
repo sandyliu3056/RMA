@@ -86,13 +86,15 @@ def clean_raw(raw):
         raise ValueError(T("找不到標題列（第一欄應有 CaseID）"))
     h = hits[0]
     df = raw.iloc[h + 1:].copy()
-    df.columns = [str(c).strip() for c in raw.iloc[h]]
+    # 標題列：空白、None、NaN 的儲存格不是欄名（工作表範圍比標題寬時會有）；重複欄名只留第一個
+    df.columns = ["" if (c is None or (isinstance(c, float) and np.isnan(c))) else str(c).strip() for c in raw.iloc[h]]
     df = df.loc[:, [c for c in df.columns if c and c != "nan"]]
+    df = df.loc[:, ~pd.Index(df.columns).duplicated()]
     df = df[df["CaseID"].notna()]
     df = df[df["CaseID"].astype(str).str.strip() != "案件編號"]
     for c in DATE_COLS:
         if c in df.columns:
-            df[c] = pd.to_datetime(df[c], errors="coerce")
+            df[c] = to_datetime_mixed(df[c])
     for c in NUM_COLS:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
@@ -101,6 +103,18 @@ def clean_raw(raw):
             df[c] = df[c].astype(str).str.strip().replace({"nan": np.nan, "None": np.nan, "": np.nan})
     df = df.dropna(subset=["CreateDate"]).reset_index(drop=True)
     return df
+
+
+def to_datetime_mixed(s):
+    """日期欄轉 datetime：先用快速路徑；Excel 日期與手打文字日期混在一起時，解析失敗的再逐格處理。"""
+    out = pd.to_datetime(s, errors="coerce")
+    if pd.api.types.is_datetime64_any_dtype(s):
+        return out
+    bad = out.isna() & s.notna() & (s.astype(str).str.strip() != "")
+    if bad.any():
+        out = out.copy()
+        out[bad] = pd.to_datetime(s[bad], errors="coerce", format="mixed")
+    return out
 
 
 def default_period_start(ref_date):

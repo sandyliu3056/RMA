@@ -293,7 +293,10 @@ def load(rows, start=None, progress=print):
     raw = pd.DataFrame(rows)
     df = E.clean_raw(raw)
     progress(L(f"  共 {len(df):,} 列，欄位 {df.shape[1]} 個", f"  {len(df):,} rows, {df.shape[1]} columns"))
-    data = E.prepare(df, start or None)
+    try:
+        data = E.prepare(df, start or None)
+    except KeyError as ex:   # 匯出檔少了欄位
+        raise ValueError(T("缺少欄位：") + str(ex.args[0] if ex.args else ex)) from None
     ps, rd = data.attrs["period_start"], data.attrs["ref_date"]
     progress(L(f"  分析期間 {ps:%Y-%m-%d} 起，資料日期 {rd:%Y-%m-%d}，{len(data):,} 件",
                f"  Period from {ps:%Y-%m-%d}, data as of {rd:%Y-%m-%d}, {len(data):,} cases"))
@@ -513,6 +516,7 @@ def po(rows):
     po = pd.DataFrame(rows[1:], columns=[str(c).strip() if c is not None else "" for c in rows[0]])
     alias = _po_alias()
     po = po.rename(columns={c: alias.get(str(c).strip(), c) for c in po.columns})
+    po = po.loc[:, ~po.columns.duplicated()]   # 重複的欄名取第一個
     need = PO_COLS[:7]
     miss = [c for c in need if c not in po.columns]
     if miss:
@@ -528,7 +532,7 @@ def po_result():
         return None
     po = STATE["po"].copy()
     for c in ("下單日", "承諾交期", "實際到貨日"):
-        po[c] = pd.to_datetime(po[c], errors="coerce")
+        po[c] = E.to_datetime_mixed(po[c])
     today = pd.Timestamp(dt.date.today())
     po["已到貨"] = po["實際到貨日"].notna()
     po["準交"] = po["已到貨"] & (po["實際到貨日"] <= po["承諾交期"])
