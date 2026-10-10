@@ -113,6 +113,15 @@ WEB_EN = {
     "啟動中…": "Starting…",
     "請輸入分析起日": "Enter the analysis start date",
     "粗體列是狀態分組，底下是歸入該組的 AIO 原始狀態。": "Bold rows are the status groups; the rows under each are the AIO statuses that belong to it.",
+    # ── 圖表說明
+    "每根長條＝該週建案的案件所申請的零件顆數合計（含所有狀態）；只列完整週，顏色是各國家的份量。": "Each bar is the total number of parts requested by cases created that week (all statuses); only full weeks are shown, and the colours are each country's share.",
+    "每根長條＝該週建案的案件所申請的零件顆數合計（含所有狀態）；只列完整週，顏色是各案件類型的份量。": "Each bar is the total number of parts requested by cases created that week (all statuses); only full weeks are shown, and the colours are each case type's share.",
+    "週（週一日期）": "Week (Monday date)",
+    "零件顆數": "Parts (units)",
+    "每週申請零件顆數（依國家）": "Parts requested per week (by country)",
+    "每週申請零件顆數（依案件類型）": "Parts requested per week (by case type)",
+    "在途件數（依狀態分組）": "Open cases by status group",
+    "每根長條＝目前還沒結案的案件數；分組的定義見左表。": "Each bar is the number of cases still open; see the table on the left for what each group contains.",
     "圖表套件載入中…": "Loading chart packages…",
     "圖表套件載入失敗，需要時會再試": "Chart packages failed to load; will retry when needed",
     # ── 步驟進度
@@ -368,7 +377,8 @@ def summary():
         "status_title": tr("各狀態在途件數"),
         "status_table": status_breakdown(d),
         "status_hint": tr("粗體列是狀態分組，底下是歸入該組的 AIO 原始狀態。"),
-        "status_chart": {"labels": [T(str(i)) for i in sc.index], "values": [int(v) for v in sc["件數"]]},
+        "status_chart": {"labels": [T(str(i)) for i in sc.index], "values": [int(v) for v in sc["件數"]],
+                         "title": tr("在途件數（依狀態分組）"), "ylabel": T("件數"), "note": tr("每根長條＝目前還沒結案的案件數；分組的定義見左表。")},
         "analyses": [[a.key, E.title_part(a.title, -1)] for a in rep.analyses.values()],
     }
 
@@ -399,7 +409,19 @@ def tab_demand(by="國家", weeks=4):
     tp = E.top_parts(rep.parts, 30)
     chart = None
     if "合計" in wk.columns and len(wk):
-        chart = {"labels": [str(i) for i in wk.index], "values": [_f(v) for v in wk["合計"]]}
+        # 堆疊長條：前 5 個欄位各一色，其餘併成「其他」
+        cols = [c for c in wk.columns if c != "合計"]
+        # 國家很多：前 5 名各一色，其餘併成「其他」；類型只有六種就全部列出
+        top, rest = (cols[:5], cols[5:]) if len(cols) > 6 else (cols, [])
+        palette = ["#2E6FBA", "#D9822B", "#2E9E6B", "#8E4FB5", "#C9A227", "#4FB0C6", "#B5544C", "#6B7280"]
+        series = [{"name": T(str(c)), "values": [_f(v) for v in wk[c]], "color": palette[i % len(palette)]} for i, c in enumerate(top)]
+        if rest:
+            series.append({"name": T("其他"), "values": [_f(v) for v in wk[rest].sum(axis=1)], "color": "#6B7280"})
+        chart = {"labels": [str(i) for i in wk.index], "series": series, "totals": [_f(v) for v in wk["合計"]],
+                 "title": tr("每週申請零件顆數（依國家）" if by == "國家" else "每週申請零件顆數（依案件類型）"),
+                 "xlabel": tr("週（週一日期）"), "ylabel": tr("零件顆數"),
+                 "note": tr("每根長條＝該週建案的案件所申請的零件顆數合計（含所有狀態）；只列完整週，顏色是各國家的份量。" if by == "國家"
+                            else "每根長條＝該週建案的案件所申請的零件顆數合計（含所有狀態）；只列完整週，顏色是各案件類型的份量。")}
     return {"weekly": df_json(wk), "weekly_x": remember("demand.weekly", wk, True, T("週申請零件量.xlsx")), "weekly_chart": chart,
             "forecast_title": L(f"未來 {weeks} 週需求推估（最近 4 個完整週平均 × 週數；高峰＝最高週 × 週數）",
                                 f"Next {weeks} weeks demand forecast (average of the last 4 full weeks × weeks; peak = highest week × weeks)"),

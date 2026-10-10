@@ -92,7 +92,16 @@
   .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   .two > *, .report > *, .rbody > * { min-width:0; }
   @media (max-width:900px) { .two { grid-template-columns:1fr; } }
-  .bars { display:flex; align-items:flex-end; gap:12px; height:220px; padding:10px 8px 0; border:2px solid var(--navy); border-radius:8px; background:var(--panel); overflow-x:auto; }
+  .chart { border:2px solid var(--navy); border-radius:8px; background:var(--panel); padding:10px 12px 8px; }
+  .ch-title { font-weight:700; color:var(--ink); margin-bottom:4px; }
+  .ch-unit { font-weight:400; color:var(--mute); font-size:.85rem; }
+  .ch-x { text-align:right; color:var(--mute); font-size:.78rem; margin-top:2px; }
+  .ch-note { color:var(--mute); font-size:.82rem; margin-top:6px; border-top:1px dashed var(--line); padding-top:6px; }
+  .bars { display:flex; align-items:flex-end; gap:12px; height:200px; padding:6px 4px 0; overflow-x:auto; }
+  .bars .b b, .bars .b span { flex:none; }
+  .bars .b .segs { display:flex; flex-direction:column; justify-content:flex-end; width:70%; height:150px; flex:none; gap:0; }
+  .bars .b .segs i { width:100%; border-radius:0; flex:none; }
+  .bars .b .segs i:first-child { border-radius:4px 4px 0 0; }
   .bars .b { flex:1; min-width:46px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; font-size:.78rem; color:var(--mute); }
   .bars .b i { display:block; width:70%; background:var(--orange); border-radius:4px 4px 0 0; }
   .bars .b b { color:var(--ink); font-size:.82rem; }
@@ -238,7 +247,7 @@
     <div id="src-status" style="display:none">
       <div class="section" id="src-status-title" data-t="各狀態在途件數">各狀態在途件數</div>
       <div class="hint" id="src-status-hint"></div>
-      <div class="two"><div class="tbl tall" id="src-status-tbl"></div><div class="bars" id="src-status-chart"></div></div>
+      <div class="two"><div class="tbl tall" id="src-status-tbl"></div><div class="chart" id="src-status-chart"></div></div>
     </div>
   </section>
 
@@ -250,7 +259,7 @@
       <button class="btn primary" id="d-run" data-t="重新計算">重新計算</button>
     </div>
     <div class="section" data-t="每週申請零件顆數（完整週）">每週申請零件顆數（完整週）</div>
-    <div class="two"><div class="tbl" id="d-weekly"></div><div class="bars" id="d-chart"></div></div>
+    <div class="two"><div class="tbl" id="d-weekly"></div><div class="chart" id="d-chart"></div></div>
     <div class="row"><button class="btn" id="d-weekly-dl" data-t="匯出上表">匯出上表</button></div>
     <div class="section" id="d-fc-title"></div>
     <div class="tbl" id="d-forecast"></div>
@@ -367,9 +376,9 @@
 <!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
 <script src="config.local.js" onerror="void 0"></script>
 <!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
-<script src="ui_strings.js?v=2026-10-10m"></script>
+<script src="ui_strings.js?v=2026-10-10o"></script>
 <!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
-<script src="scene.js?v=2026-10-10m"></script>
-<script src="app.js?v=2026-10-10m"></script>
+<script src="scene.js?v=2026-10-10o"></script>
+<script src="app.js?v=2026-10-10o"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10m";
+  const V = "2026-10-10o";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -273,9 +273,29 @@
     el.innerHTML = items.map(([k, v, d]) =>
       `<div class="kpi"${d ? ` title="${esc(d)}"` : ""}><div class="k">${esc(k)}${d ? ' <span class="info">ⓘ</span>' : ""}</div><div class="v">${esc(v)}</div></div>`).join("");
   }
-  function renderBars(el, labels, values) {
+  function renderBars(el, labels, values, meta) {
+    // 單一數列的直條圖；meta = {title, ylabel, note}
     const max = Math.max(1, ...values);
-    el.innerHTML = labels.map((l, i) => `<div class="b"><b>${values[i].toLocaleString()}</b><i style="height:${Math.round(values[i] / max * 150)}px"></i><span title="${esc(l)}">${esc(l)}</span></div>`).join("");
+    const m = meta || {};
+    el.innerHTML = (m.title ? `<div class="ch-title">${esc(m.title)}${m.ylabel ? ` <span class="ch-unit">(${esc(m.ylabel)})</span>` : ""}</div>` : "") +
+      `<div class="bars">` + labels.map((l, i) => `<div class="b"><b>${values[i].toLocaleString()}</b><i style="height:${Math.round(values[i] / max * 150)}px" title="${esc(l)}：${values[i].toLocaleString()}"></i><span title="${esc(l)}">${esc(l)}</span></div>`).join("") + `</div>` +
+      (m.note ? `<div class="ch-note">${esc(m.note)}</div>` : "");
+  }
+  function renderStackedBars(el, c) {
+    // 堆疊直條圖：c = {title, xlabel, ylabel, note, labels, series:[{name, values, color}], totals}
+    if (!c || !c.labels || !c.labels.length) { el.innerHTML = `<div class="caption pad">${esc(t("（沒有資料）"))}</div>`; return; }
+    const totals = c.totals || c.labels.map((_, i) => c.series.reduce((s, x) => s + (x.values[i] || 0), 0));
+    const max = Math.max(1, ...totals);
+    let h = `<div class="ch-title">${esc(c.title || "")}${c.ylabel ? ` <span class="ch-unit">(${esc(c.ylabel)})</span>` : ""}</div>`;
+    h += `<div class="hb-legend">${c.series.map((s) => `<span><i style="background:${esc(s.color)}"></i>${esc(s.name)}</span>`).join("")}</div>`;
+    h += `<div class="bars">` + c.labels.map((l, i) => {
+      // 第一個數列在最下面：由上往下排，所以反轉順序
+      const segs = c.series.slice().reverse().map((s) => { const v = s.values[i] || 0; return v ? `<i style="height:${v / max * 150}px;background:${esc(s.color)}" title="${esc(s.name)}：${Math.round(v).toLocaleString()}"></i>` : ""; }).join("");
+      return `<div class="b"><b>${Math.round(totals[i]).toLocaleString()}</b><div class="segs">${segs}</div><span title="${esc(l)}">${esc(l)}</span></div>`;
+    }).join("") + `</div>`;
+    if (c.xlabel) h += `<div class="ch-x">${esc(c.xlabel)} →</div>`;
+    if (c.note) h += `<div class="ch-note">${esc(c.note)}</div>`;
+    el.innerHTML = h;
   }
   const LIGHT = new Set(["#C9B79C", "#F2B134", "#FBE7C6"]);
   function renderHBars(el, c) {
@@ -374,7 +394,7 @@
     $("src-status-title").textContent = s.status_title;
     $("src-status-hint").textContent = s.status_hint || "";
     renderTable($("src-status-tbl"), s.status_table);
-    renderBars($("src-status-chart"), s.status_chart.labels, s.status_chart.values);
+    renderBars($("src-status-chart"), s.status_chart.labels, s.status_chart.values, s.status_chart);
     $("src-status").style.display = "block";
     analyses = s.analyses || [];
   }
@@ -408,7 +428,7 @@
       const weeks = clampInput($("d-weeks"), 4);
       demandData = await call("tab_demand", { by: $("d-by").value, weeks });
       renderTable($("d-weekly"), demandData.weekly);
-      if (demandData.weekly_chart) renderBars($("d-chart"), demandData.weekly_chart.labels, demandData.weekly_chart.values.map(Math.round));
+      if (demandData.weekly_chart) renderStackedBars($("d-chart"), demandData.weekly_chart);
       else $("d-chart").innerHTML = "";
       $("d-fc-title").textContent = demandData.forecast_title;
       renderTable($("d-forecast"), demandData.forecast);
