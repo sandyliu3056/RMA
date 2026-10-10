@@ -122,6 +122,7 @@ WEB_EN = {
     "每週申請零件顆數（依案件類型）": "Parts requested per week (by case type)",
     "在途件數（依狀態分組）": "Open cases by status group",
     "每根長條＝目前還沒結案的案件數；分組的定義見左表。": "Each bar is the number of cases still open; see the table on the left for what each group contains.",
+    "每一列是一個狀態分組，色塊是歸入該組的 AIO 原始狀態（太窄放不下名字的，滑鼠停上去看）；右邊是該組合計。": "Each row is a status group; the coloured blocks are the AIO statuses in that group (hover over the ones too narrow to label). The number on the right is the group total.",
     "圖表套件載入中…": "Loading chart packages…",
     "圖表套件載入失敗，需要時會再試": "Chart packages failed to load; will retry when needed",
     # ── 步驟進度
@@ -377,10 +378,21 @@ def summary():
         "status_title": tr("各狀態在途件數"),
         "status_table": status_breakdown(d),
         "status_hint": tr("粗體列是狀態分組，底下是歸入該組的 AIO 原始狀態。"),
-        "status_chart": {"labels": [T(str(i)) for i in sc.index], "values": [int(v) for v in sc["件數"]],
-                         "title": tr("在途件數（依狀態分組）"), "ylabel": T("件數"), "note": tr("每根長條＝目前還沒結案的案件數；分組的定義見左表。")},
+        "status_chart": status_chart(d),
         "analyses": [[a.key, E.title_part(a.title, -1)] for a in rep.analyses.values()],
     }
+
+
+def status_chart(d):
+    """橫向堆疊圖：每列一個狀態分組，色塊是該組內的 AIO 原始狀態。"""
+    o = d[d["在途"]]
+    g = o.groupby(["狀態分類", "Status"], observed=True).size()
+    totals = g.groupby(level=0).sum().sort_values(ascending=False)
+    rows = [{"label": T(str(grp)), "total": int(total),
+             "segs": [{"name": str(st), "value": int(n)} for st, n in g.loc[grp].sort_values(ascending=False).items()]}
+            for grp, total in totals.items()]
+    return {"title": tr("在途件數（依狀態分組）"), "unit": T("件數"), "rows": rows,
+            "note": tr("每一列是一個狀態分組，色塊是歸入該組的 AIO 原始狀態（太窄放不下名字的，滑鼠停上去看）；右邊是該組合計。")}
 
 
 def status_breakdown(d):

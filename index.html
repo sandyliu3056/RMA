@@ -118,6 +118,10 @@
   .hb-legend i { font-style:normal; }
   .hb-bar i.dark { color:var(--navy); }
   .hb-row b { color:var(--mute); font-weight:400; }
+  .hstack .hb-row { grid-template-columns:fit-content(30%) 1fr 56px; margin:6px 0; font-size:.84rem; }
+  .hstack .hb-bar { height:26px; border-radius:4px; overflow:hidden; }
+  .hstack .hb-bar i { line-height:26px; font-size:.78rem; font-weight:700; padding:0 4px; }
+  .hstack .hb-row b { font-weight:700; color:var(--ink); }
   .log { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-family:Consolas, monospace; font-size:.8rem; max-height:180px; overflow:auto; white-space:pre-wrap; margin-top:6px; }
   /* 步驟進度（啟動／載入）動畫 */
   .steps-panel { background:var(--panel); border:2px solid var(--navy); border-radius:9px; padding:12px 16px; margin:10px 0; }
@@ -376,9 +380,9 @@
 <!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
 <script src="config.local.js" onerror="void 0"></script>
 <!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
-<script src="ui_strings.js?v=2026-10-10o"></script>
+<script src="ui_strings.js?v=2026-10-10p"></script>
 <!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
-<script src="scene.js?v=2026-10-10o"></script>
-<script src="app.js?v=2026-10-10o"></script>
+<script src="scene.js?v=2026-10-10p"></script>
+<script src="app.js?v=2026-10-10p"></script>
 </body>
 </html>

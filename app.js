@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10o";
+  const V = "2026-10-10p";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -281,6 +281,21 @@
       `<div class="bars">` + labels.map((l, i) => `<div class="b"><b>${values[i].toLocaleString()}</b><i style="height:${Math.round(values[i] / max * 150)}px" title="${esc(l)}：${values[i].toLocaleString()}"></i><span title="${esc(l)}">${esc(l)}</span></div>`).join("") + `</div>` +
       (m.note ? `<div class="ch-note">${esc(m.note)}</div>` : "");
   }
+  const SEG_COLORS = ["#2E6FBA", "#D9822B", "#2E9E6B", "#8E4FB5", "#C9A227", "#4FB0C6", "#B5544C", "#6B7280", "#7FA650", "#C77DB5", "#5B8FD0", "#E8862B"];
+  function renderHStack(el, c) {
+    // 橫向堆疊：c = {title, unit, note, rows:[{label, total, segs:[{name, value}]}]}；色塊夠寬就標名稱與數量
+    if (!c || !c.rows || !c.rows.length) { el.innerHTML = `<div class="caption pad">${esc(t("（沒有資料）"))}</div>`; return; }
+    const max = Math.max(1, ...c.rows.map((r) => r.total));
+    let h = `<div class="ch-title">${esc(c.title || "")}${c.unit ? ` <span class="ch-unit">(${esc(c.unit)})</span>` : ""}</div><div class="hstack">`;
+    for (const r of c.rows) {
+      h += `<div class="hb-row"><span class="hb-lab" title="${esc(r.label)}">${esc(r.label)}</span><span class="hb-bar">` +
+        r.segs.map((sg, i) => { const w = sg.value / max * 100; return `<i style="width:${w}%;background:${SEG_COLORS[i % SEG_COLORS.length]}" title="${esc(sg.name)}：${sg.value.toLocaleString()}">${esc(sg.name)} ${sg.value.toLocaleString()}</i>`; }).join("") +
+        `</span><b>${r.total.toLocaleString()}</b></div>`;
+    }
+    h += `</div>` + (c.note ? `<div class="ch-note">${esc(c.note)}</div>` : "");
+    el.innerHTML = h;
+    el.querySelectorAll(".hb-bar i").forEach((seg) => { if (seg.scrollWidth > seg.clientWidth) seg.textContent = ""; });
+  }
   function renderStackedBars(el, c) {
     // 堆疊直條圖：c = {title, xlabel, ylabel, note, labels, series:[{name, values, color}], totals}
     if (!c || !c.labels || !c.labels.length) { el.innerHTML = `<div class="caption pad">${esc(t("（沒有資料）"))}</div>`; return; }
@@ -393,9 +408,9 @@
     $("src-period").textContent = s.period;
     $("src-status-title").textContent = s.status_title;
     $("src-status-hint").textContent = s.status_hint || "";
+    $("src-status").style.display = "block";   // 先顯示再畫圖：色塊的文字要量得到寬度才知道放不放得下
     renderTable($("src-status-tbl"), s.status_table);
-    renderBars($("src-status-chart"), s.status_chart.labels, s.status_chart.values, s.status_chart);
-    $("src-status").style.display = "block";
+    renderHStack($("src-status-chart"), s.status_chart);
     analyses = s.analyses || [];
   }
   $("load").addEventListener("click", async () => {
