@@ -28,6 +28,16 @@
   .hdr .clock .t { font-size:1.55rem; font-weight:700; line-height:1; letter-spacing:.05em; }
   .hdr .clock .d { color:#D9C7A8; font-size:.76rem; }
   .hdr a { color:#D9C7A8; font-size:.8rem; }
+  /* 啟動狀態膠囊：準備中（金色進度條）→ 就緒（綠點）→ 失敗（紅點） */
+  .pill { display:flex; align-items:center; gap:7px; border:1px solid var(--selline); border-radius:999px; padding:3px 10px; font-size:.8rem; color:#D9C7A8; white-space:nowrap; }
+  .pill .dot { width:8px; height:8px; border-radius:50%; background:var(--gold); animation:blink 1.2s ease-in-out infinite; }
+  .pill .bar { display:block; width:70px; height:6px; border-radius:3px; background:var(--sel); overflow:hidden; }
+  .pill .bar b { display:block; height:100%; width:0; background:var(--gold); transition:width .4s; }
+  .pill.ready .dot { background:#6CC070; animation:none; }
+  .pill.ready .bar { display:none; }
+  .pill.fail .dot { background:#E06C5C; animation:none; }
+  .pill.fail .bar { display:none; }
+  @keyframes blink { 50% { opacity:.3; } }
   .hbtn { background:transparent; color:var(--gold); border:1px solid var(--selline); border-radius:6px; padding:4px 10px; font-family:inherit; font-size:.85rem; font-weight:700; cursor:pointer; }
   .hbtn:hover { background:var(--sel); }
   /* 分頁列（金色長條＋圓角分頁，選中的分頁與下方卡片相連） */
@@ -147,6 +157,7 @@
         <option value="Asia/Singapore" data-t="新加坡">新加坡</option><option value="Asia/Tokyo" data-t="東京">東京</option><option value="UTC">UTC</option>
       </select>
       <div class="clock"><div class="t" id="clock">--:--</div><div class="d"><span id="date"></span> <span id="tzname">台北</span></div></div>
+      <div class="pill" id="boot-pill" title=""><span class="dot"></span><span id="boot-text" data-t="準備中">準備中</span><i class="bar"><b id="boot-bar"></b></i></div>
       <button class="hbtn" id="gloss-btn" data-t="名詞說明">名詞說明</button>
       <a href="https://github.com/sandyliu3056/RMA#readme" target="_blank" rel="noopener" data-t="Windows 版下載說明">Windows 版下載說明</a>
     </div>
@@ -165,12 +176,12 @@
   <main class="card">
   <!-- 資料來源 -->
   <section class="tab active" id="tab-source">
-    <div class="notice boot" id="boot"><span class="spin"></span><span id="boot-msg" data-t="啟動瀏覽器版 Python…">啟動瀏覽器版 Python…</span></div>
     <div class="row panel">
       <label><span data-t="AIO 匯出檔（.xlsx，工作表 AllInOneData）">AIO 匯出檔（.xlsx，工作表 AllInOneData）</span><input type="file" id="aio" accept=".xlsx,.xlsm" disabled></label>
       <label><span data-t="分析起日（留空＝資料最後日期的前一個月 1 日）">分析起日（留空＝資料最後日期的前一個月 1 日）</span><input type="text" id="start" placeholder="2026-08-01" size="14"></label>
       <button class="btn primary" id="load" disabled data-t="載入並分析">載入並分析</button>
     </div>
+    <div class="caption" id="src-hint" data-t="選擇 AIO 匯出檔後按「載入並分析」；分析在你的瀏覽器裡進行，檔案不會上傳。">選擇 AIO 匯出檔後按「載入並分析」；分析在你的瀏覽器裡進行，檔案不會上傳。</div>
     <div class="caption" data-t="只分析這天以後建立的案件。不填的話，會自動從「上個月 1 日」開始：例如資料最後一天是 9/21，就分析 8/1 到 9/21。">只分析這天以後建立的案件。不填的話，會自動從「上個月 1 日」開始：例如資料最後一天是 9/21，就分析 8/1 到 9/21。</div>
     <div class="kpis" id="src-kpis"></div>
     <div class="caption" id="src-caption"></div>
@@ -311,8 +322,8 @@
 <!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
 <script src="config.local.js" onerror="void 0"></script>
 <!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
-<script src="ui_strings.js?v=2026-10-10b"></script>
+<script src="ui_strings.js?v=2026-10-10c"></script>
 <!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
-<script src="app.js?v=2026-10-10b"></script>
+<script src="app.js?v=2026-10-10c"></script>
 </body>
 </html>

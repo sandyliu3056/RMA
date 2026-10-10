@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10b";
+  const V = "2026-10-10c";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -54,13 +54,14 @@
     for (const o of $("zoom-sel").options) o.textContent = o.value + "%" + (o.value === "100" ? " (" + t("一般") + ")" : "");
     const tzo = $("tz-sel").selectedOptions[0];
     $("tzname").textContent = tzo ? tzo.textContent : "";
+    if (!ready && bootPct > 0 && !$("boot-pill").classList.contains("fail")) showProgress(bootPct);
   }
   function setT(el, key) { el.dataset.t = key; el.textContent = t(key); }
 
   // ------------------------------------------------------------ worker
   const worker = new Worker("worker.js?v=" + V);
   const pending = new Map();
-  let seq = 0, ready = false, loaded = false, switching = false, curFile = "";
+  let seq = 0, ready = false, loaded = false, switching = false, curFile = "", bootPct = 0;
   let analyses = [];
   const loadedTabs = new Set();
 
@@ -74,6 +75,7 @@
   worker.onmessage = (ev) => {
     const m = ev.data;
     if (m.type === "log") { log(m.msg); return; }
+    if (m.type === "progress") { showProgress(m.pct); return; }
     if (m.type === "ready") { onReady(); return; }
     const p = pending.get(m.id);
     if (!p) return;
@@ -81,15 +83,28 @@
     m.ok ? p.resolve(m.result) : p.reject(new Error(m.error));
   };
   worker.onerror = (e) => { bootFailed(e); };
+  function showProgress(pct) {
+    // 標題列膠囊與「載入並分析」按鈕顯示啟動進度；就緒後恢復
+    bootPct = Math.max(bootPct, Math.min(100, pct | 0));
+    $("boot-bar").style.width = bootPct + "%";
+    if (!ready) {
+      $("boot-text").textContent = t("準備中") + " " + bootPct + "%";
+      $("load").textContent = t("準備中") + " " + bootPct + "%";
+    }
+  }
   function bootFailed(e) {
     const msg = t("啟動失敗：") + friendly(e);
-    $("boot-msg").textContent = msg; $("boot").querySelector(".spin").style.display = "none";
-    toast(msg, 10000);
+    $("boot-pill").classList.add("fail"); $("boot-pill").title = msg;
+    setT($("boot-text"), "啟動失敗");
+    setT($("load"), "啟動失敗，請重新整理頁面");
+    log(msg); toast(msg, 10000);
   }
   async function onReady() {
     ready = true;
     try { await syncLang(); } catch (e) { toast(friendly(e), 8000); }
-    setT($("boot"), "瀏覽器版 Python 已就緒，請選擇 AIO 匯出檔。");
+    $("boot-pill").classList.add("ready"); $("boot-pill").title = "";
+    setT($("boot-text"), "就緒");
+    setT($("load"), "載入並分析");
     $("aio").disabled = false; $("load").disabled = false;
   }
   async function syncLang() {
@@ -134,7 +149,6 @@
     if (!logTouched) { logTouched = true; el.textContent = ""; el.removeAttribute("data-t"); }
     el.textContent += (el.textContent ? "\n" : "") + msg;
     el.scrollTop = el.scrollHeight;
-    if (!ready) $("boot-msg").textContent = msg;
   }
   let toastTimer = null;
   function toast(msg, ms) {

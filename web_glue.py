@@ -112,6 +112,11 @@ WEB_EN = {
     "瀏覽器版（資料不離開這台電腦）": "Browser edition (your data never leaves this computer)",
     "啟動中…": "Starting…",
     "請輸入分析起日": "Enter the analysis start date",
+    "準備中": "Starting",
+    "就緒": "Ready",
+    "啟動失敗": "Startup failed",
+    "啟動失敗，請重新整理頁面": "Startup failed. Please reload the page",
+    "選擇 AIO 匯出檔後按「載入並分析」；分析在你的瀏覽器裡進行，檔案不會上傳。": "Pick the AIO export file and click \"Load & Analyze\". Everything runs in your browser; the file is never uploaded.",
 }
 
 
