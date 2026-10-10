@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10r";
+  const V = "2026-10-10s";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -62,7 +62,7 @@
   const worker = new Worker("worker.js?v=" + V);
   const pending = new Map();
   let seq = 0, ready = false, loaded = false, switching = false, curFile = "", bootPct = 0;
-  let analyses = [];
+  let analyses = [], statusDetail = null;
   const loadedTabs = new Set();
 
   function call(cmd, args, transfer) {
@@ -409,9 +409,14 @@
     $("src-caption").textContent = s.caption;
     $("src-period").textContent = s.period;
     $("src-status-title").textContent = s.status_title;
-    $("src-status-hint").textContent = s.status_hint || "";
+    $("src-status-hint").textContent = "";   // 說明放在明細視窗裡
     $("src-status").style.display = "block";   // 先顯示再畫圖：色塊的文字要量得到寬度才知道放不放得下
-    renderTable($("src-status-tbl"), s.status_table);
+    // 頁面上只放精簡版（分組＋合計）；完整的兩層表放在「顯示原始狀態明細」視窗
+    statusDetail = s.status_table;
+    const full = s.status_table;
+    const gi = full.cls.map((c, r) => c === "grp" ? r : -1).filter((r) => r >= 0);
+    renderTable($("src-status-tbl"), { columns: [full.columns[0], full.columns[2]], defs: [full.defs[0], full.defs[2]], numeric: [full.numeric[0], full.numeric[2]],
+                                        rows: gi.map((r) => [full.rows[r][0], full.rows[r][2]]), warn: gi.map(() => false), cls: gi.map(() => ""), total: gi.length });
     renderHStack($("src-status-chart"), s.status_chart);
     analyses = s.analyses || [];
   }
@@ -608,10 +613,19 @@
       $("gloss-body").scrollTop = 0; $("gloss-body").focus();
     } catch (e) { toast(friendly(e)); }
   });
+  function openDetail(title, hint, tj) {
+    $("detail-title").textContent = title; $("detail-hint").textContent = hint || "";
+    $("detail-body").innerHTML = '<div class="tbl"></div>'; renderTable($("detail-body").firstChild, tj, 5000);
+    $("detail").style.display = "flex"; $("detail-body").scrollTop = 0; $("detail-body").focus();
+  }
+  function closeDetail() { if ($("detail").style.display !== "flex") return; $("detail").style.display = "none"; $("src-status-more").focus(); }
+  $("src-status-more").addEventListener("click", () => { if (!statusDetail) { needData(); return; } openDetail(t("各組包含的 AIO 原始狀態"), t("粗體列是狀態分組，底下是歸入該組的 AIO 原始狀態。"), statusDetail); });
+  $("detail-close").addEventListener("click", closeDetail);
+  $("detail").addEventListener("click", (e) => { if (e.target === $("detail")) closeDetail(); });
   function closeGloss() { if ($("gloss").style.display === "none") return; $("gloss").style.display = "none"; $("gloss-btn").focus(); }
   $("gloss-close").addEventListener("click", closeGloss);
   $("gloss").addEventListener("click", (e) => { if (e.target === $("gloss")) closeGloss(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeGloss(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeGloss(); closeDetail(); } });
 
   // ------------------------------------------------------------ 跨單位協調（存在 localStorage，欄位名稱與桌面版的 協調待辦.json 相同）
   const KEY = "rma_actions";

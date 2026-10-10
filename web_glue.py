@@ -126,6 +126,8 @@ WEB_EN = {
     "圖表套件載入中…": "Loading chart packages…",
     "圖表套件載入失敗，需要時會再試": "Chart packages failed to load; will retry when needed",
     "等待套件載入…": "Waiting for packages…",
+    "顯示原始狀態明細": "Show status details",
+    "各組包含的 AIO 原始狀態": "AIO statuses in each group",
     "圖表與匯出套件下載失敗，請檢查網路後再試一次。": "The chart and export packages could not be downloaded. Check your connection and try again.",
     "圖表與匯出套件還在背景載入，載完會自動開始。": "Chart and export packages are still loading in the background; this will start automatically when they are ready.",
     # ── 步驟進度
