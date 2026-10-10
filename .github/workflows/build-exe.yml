@@ -33,6 +33,7 @@ jobs:
           --name RMA_PartsPlanner
           --hidden-import 零件規劃平台
           --hidden-import rma_engine
+          --hidden-import i18n
           --hidden-import PIL.ImageTk
           --hidden-import PIL._tkinter_finder
           --collect-data pptx

@@ -8,18 +8,25 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <style>
-  :root { --navy:#3B2A1A; --gold:#F2B134; --tabbar:#F5A623; --bg:#FBF6EC; --card:#FFFDF7; --line:#D9CBB6; --ink:#3B2A1A; --mute:#7A6652; --orange:#E8862B; --hover:#FFE2A8; --stripe:#F6EFE3; --btn:#6B4E31; }
+  :root { --navy:#3B2A1A; --gold:#F2B134; --tabbar:#F5A623; --bg:#FBF6EC; --card:#FFFDF7; --line:#D9CBB6; --ink:#3B2A1A; --mute:#7A6652; --orange:#E8862B; --hover:#FFE2A8; --stripe:#F6EFE3; --btn:#6B4E31; --warn:#B5544C; }
   * { box-sizing:border-box; }
-  html, body { margin:0; background:var(--bg); color:var(--ink); font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif; font-size:14px; line-height:1.6; }
+  html, body { margin:0; background:var(--bg); color:var(--ink); font-family:"Microsoft JhengHei","Segoe UI","Noto Sans TC",sans-serif; font-size:14px; line-height:1.6; }
   .wrap { max-width:1400px; margin:0 auto; padding:12px 16px 40px; }
   /* 標題列 */
-  .hdr { background:var(--navy); color:var(--gold); border-radius:10px; padding:14px 22px; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+  .hdr { background:var(--navy); color:var(--gold); border-radius:10px; padding:14px 22px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
   .hdr h1 { margin:0; font-size:1.5rem; }
   .hdr .sub { color:#D9C7A8; font-size:.85rem; }
+  .hdr .right { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   .hdr .clock { text-align:right; white-space:nowrap; }
   .hdr .clock .t { font-family:Consolas, monospace; font-size:1.5rem; font-weight:700; line-height:1; }
   .hdr .clock .d { color:#D9C7A8; font-size:.78rem; }
   .hdr a { color:#D9C7A8; font-size:.8rem; margin-left:12px; }
+  .lang { display:flex; border:1px solid #8A7254; border-radius:7px; overflow:hidden; }
+  .lang button { background:transparent; color:#D9C7A8; border:0; padding:5px 10px; font-family:inherit; font-size:.85rem; cursor:pointer; }
+  .lang button.active { background:var(--gold); color:var(--ink); font-weight:700; }
+  .lang button:disabled { opacity:.5; cursor:wait; }
+  .hbtn { background:transparent; color:#D9C7A8; border:1px solid #8A7254; border-radius:7px; padding:5px 10px; font-family:inherit; font-size:.85rem; cursor:pointer; }
+  .hbtn:hover { background:#4F3A24; }
   /* 分頁列 */
   .tabs { display:flex; flex-wrap:wrap; gap:4px; background:var(--tabbar); border-radius:8px; padding:5px 6px; margin:10px 0 14px; }
   .tabs button { background:var(--gold); color:var(--ink); border:0; border-radius:6px; padding:7px 16px; font-weight:700; font-family:inherit; font-size:.95rem; cursor:pointer; }
@@ -29,8 +36,9 @@
   .tab.active { display:block; }
   /* 元件 */
   .row { display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin:6px 0 10px; }
-  .row label { display:flex; flex-direction:column; gap:3px; font-size:.85rem; color:var(--mute); }
-  input, select { font-family:inherit; font-size:.95rem; padding:7px 9px; border:1px solid var(--line); border-radius:7px; background:var(--card); color:var(--ink); }
+  .row label { display:flex; flex-direction:column; gap:3px; font-size:.85rem; color:var(--mute); max-width:100%; }
+  .row label.inline { flex-direction:row; align-items:center; gap:6px; }
+  input, select { font-family:inherit; font-size:.95rem; padding:7px 9px; border:1px solid var(--line); border-radius:7px; background:var(--card); color:var(--ink); max-width:100%; }
   input[type=file] { padding:5px; }
   .btn { font-family:inherit; font-size:.92rem; padding:8px 14px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
   .btn:hover { background:var(--hover); }
@@ -41,25 +49,43 @@
   .kpi { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 14px; }
   .kpi .k { color:var(--mute); font-size:.8rem; }
   .kpi .v { color:var(--navy); font-size:1.45rem; font-weight:700; line-height:1.3; }
+  .info { color:var(--mute); font-size:.85em; cursor:help; }
   .section { border-left:4px solid var(--orange); padding-left:8px; font-weight:700; font-size:1.05rem; margin:16px 0 6px; }
   .caption { color:var(--mute); font-size:.85rem; }
+  .pad { padding:10px; }
+  .hint { color:var(--mute); font-size:.82rem; margin:-2px 0 6px 12px; }
   .tbl { overflow:auto; max-height:420px; border:1px solid var(--line); border-radius:8px; background:var(--card); }
   .tbl.tall { max-height:520px; }
   table { border-collapse:collapse; width:100%; font-size:.88rem; }
   th { position:sticky; top:0; background:var(--btn); color:#fff; text-align:left; padding:7px 10px; font-weight:700; white-space:nowrap; }
+  th .info { color:#F2D9A8; }
   td { padding:6px 10px; border-bottom:1px solid #EFE6D8; white-space:nowrap; }
   tr:nth-child(even) td { background:var(--stripe); }
+  tr.warn td { color:var(--warn); font-weight:700; }
   td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  td.topic input { width:100%; min-width:280px; }
   .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   @media (max-width:900px) { .two { grid-template-columns:1fr; } }
-  .bars { display:flex; align-items:flex-end; gap:12px; height:220px; padding:10px 8px 0; border:1px solid var(--line); border-radius:8px; background:var(--card); }
-  .bars .b { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; font-size:.78rem; color:var(--mute); }
+  .bars { display:flex; align-items:flex-end; gap:12px; height:220px; padding:10px 8px 0; border:1px solid var(--line); border-radius:8px; background:var(--card); overflow-x:auto; }
+  .bars .b { flex:1; min-width:46px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; font-size:.78rem; color:var(--mute); }
   .bars .b i { display:block; width:70%; background:var(--orange); border-radius:4px 4px 0 0; }
   .bars .b b { color:var(--ink); font-size:.82rem; }
+  .bars .b span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  /* 水平堆疊長條圖（出貨與到貨） */
+  .hbars { border:1px solid var(--line); border-radius:8px; background:var(--card); padding:10px 12px; min-height:120px; }
+  .hb-title { font-weight:700; color:var(--navy); margin-bottom:2px; }
+  .hb-legend { display:flex; gap:14px; font-size:.8rem; color:var(--mute); margin-bottom:8px; flex-wrap:wrap; }
+  .hb-legend i { display:inline-block; width:10px; height:10px; margin-right:5px; border-radius:2px; vertical-align:-1px; }
+  .hb-row { display:grid; grid-template-columns:minmax(90px, 32%) 1fr 56px; gap:8px; align-items:center; margin:3px 0; font-size:.8rem; }
+  .hb-lab { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right; }
+  .hb-bar { display:flex; height:18px; }
+  .hb-bar i { display:block; height:100%; color:#fff; font-size:.75rem; line-height:18px; text-align:center; overflow:hidden; white-space:nowrap; }
+  .hb-bar i.dark { color:var(--navy); }
+  .hb-row b { color:var(--mute); font-weight:400; }
   .log { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-family:Consolas, monospace; font-size:.82rem; height:200px; overflow:auto; white-space:pre-wrap; }
   .notice { background:#F6EFE3; border:1px solid var(--line); border-radius:8px; padding:10px 14px; font-size:.9rem; margin:8px 0; }
   .boot { display:flex; align-items:center; gap:10px; }
-  .spin { width:16px; height:16px; border:3px solid var(--line); border-top-color:var(--orange); border-radius:50%; animation:sp 1s linear infinite; }
+  .spin { width:16px; height:16px; border:3px solid var(--line); border-top-color:var(--orange); border-radius:50%; animation:sp 1s linear infinite; flex:none; }
   @keyframes sp { to { transform:rotate(360deg); } }
   .report { display:grid; grid-template-columns:260px 1fr; gap:16px; }
   @media (max-width:900px) { .report { grid-template-columns:1fr; } }
@@ -70,50 +96,78 @@
   @media (max-width:1100px) { .rbody { grid-template-columns:1fr; } }
   .rbody img { width:100%; border:1px solid var(--line); border-radius:8px; background:#fff; }
   .rbody ul { padding-left:1.2em; margin:6px 0; }
+  .rbody .h { font-weight:700; color:var(--btn); margin-top:8px; }
+  .rbody h2 { margin:0 0 2px; font-size:1.25rem; }
+  .concl { background:#FFF1D6; padding:6px 10px; border-radius:6px; }
   .stack { display:flex; flex-direction:column; gap:8px; }
   .toast { position:fixed; right:16px; bottom:16px; background:var(--navy); color:#fff; padding:10px 16px; border-radius:8px; max-width:420px; font-size:.9rem; display:none; z-index:9; white-space:pre-wrap; }
-  .late { color:#B5544C; font-weight:700; }
   .small { font-size:.82rem; color:var(--mute); }
+  /* 名詞說明 */
+  .modal { position:fixed; inset:0; background:rgba(59,42,26,.45); display:none; align-items:center; justify-content:center; z-index:20; padding:16px; }
+  .modal-box { background:var(--card); border-radius:12px; max-width:760px; width:100%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,.25); }
+  .modal-box header { display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid var(--line); font-weight:700; font-size:1.05rem; }
+  .modal-box header button { background:none; border:0; font-size:1.2rem; cursor:pointer; color:var(--mute); }
+  .modal-box .caption { padding:8px 18px 0; }
+  .modal-body { overflow:auto; padding:8px 18px 18px; margin:0; }
+  .modal-body dt { font-weight:700; color:var(--btn); margin-top:10px; }
+  .modal-body dd { margin:0; }
+  @media (max-width:600px) {
+    .wrap { padding:8px 10px 30px; }
+    .hdr { padding:12px 14px; }
+    .hdr h1 { font-size:1.2rem; }
+    .hdr .clock .t { font-size:1.2rem; }
+    .tabs button { padding:6px 10px; font-size:.88rem; }
+    table { font-size:.82rem; }
+    .kpi .v { font-size:1.2rem; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="hdr">
     <div>
-      <h1>售後零件規劃平台</h1>
-      <div class="sub" id="status">尚未載入資料</div>
+      <h1 data-t="售後零件規劃平台">售後零件規劃平台</h1>
+      <div class="sub" id="status" data-t="尚未載入資料">尚未載入資料</div>
     </div>
-    <div class="clock">
-      <div class="t" id="clock">--:--</div>
-      <div class="d"><span id="date"></span> Taipei <a href="https://github.com/sandyliu3056/RMA/actions/workflows/build-exe.yml" target="_blank" rel="noopener">Windows 版下載</a></div>
+    <div class="right">
+      <div class="lang" id="lang"><button data-lang="zh" class="active">中文</button><button data-lang="en">English</button></div>
+      <button class="hbtn" id="gloss-btn" data-t="名詞說明">名詞說明</button>
+      <div class="clock">
+        <div class="t" id="clock">--:--</div>
+        <div class="d"><span id="date"></span> Taipei <a href="https://github.com/sandyliu3056/RMA#readme" target="_blank" rel="noopener" data-t="Windows 版下載說明">Windows 版下載說明</a></div>
+      </div>
     </div>
   </header>
 
   <nav class="tabs" id="tabs">
-    <button data-tab="source" class="active">資料來源</button>
-    <button data-tab="demand">需求規劃</button>
-    <button data-tab="stock">庫存與缺料</button>
-    <button data-tab="po">訂單與交期</button>
-    <button data-tab="ship">出貨與到貨</button>
-    <button data-tab="report">報表與分析</button>
-    <button data-tab="coord">跨單位協調</button>
+    <button data-tab="source" class="active" data-t="資料來源">資料來源</button>
+    <button data-tab="demand" data-t="需求規劃">需求規劃</button>
+    <button data-tab="stock" data-t="庫存與缺料">庫存與缺料</button>
+    <button data-tab="po" data-t="訂單與交期">訂單與交期</button>
+    <button data-tab="ship" data-t="出貨與到貨">出貨與到貨</button>
+    <button data-tab="report" data-t="報表與分析">報表與分析</button>
+    <button data-tab="coord" data-t="跨單位協調">跨單位協調</button>
   </nav>
 
   <!-- 資料來源 -->
   <section class="tab active" id="tab-source">
-    <div class="notice boot" id="boot"><span class="spin"></span><span id="boot-msg">啟動瀏覽器版 Python…</span></div>
+    <div class="notice boot" id="boot"><span class="spin"></span><span id="boot-msg" data-t="啟動瀏覽器版 Python…">啟動瀏覽器版 Python…</span></div>
     <div class="row">
-      <label>AIO 匯出檔（.xlsx，工作表 AllInOneData）<input type="file" id="aio" accept=".xlsx,.xlsm" disabled></label>
-      <label>分析起日（留空＝資料最後日期的前一個月 1 日）<input type="text" id="start" placeholder="2026-08-01" size="14"></label>
-      <button class="btn primary" id="load" disabled>載入並分析</button>
+      <label><span data-t="AIO 匯出檔（.xlsx，工作表 AllInOneData）">AIO 匯出檔（.xlsx，工作表 AllInOneData）</span><input type="file" id="aio" accept=".xlsx,.xlsm" disabled></label>
+      <label><span data-t="分析起日（留空＝資料最後日期的前一個月 1 日）">分析起日（留空＝資料最後日期的前一個月 1 日）</span><input type="text" id="start" placeholder="2026-08-01" size="14"></label>
+      <button class="btn primary" id="load" disabled data-t="載入並分析">載入並分析</button>
     </div>
+    <div class="caption" data-t="只分析這天以後建立的案件。不填的話，會自動從「上個月 1 日」開始：例如資料最後一天是 9/21，就分析 8/1 到 9/21。">只分析這天以後建立的案件。不填的話，會自動從「上個月 1 日」開始：例如資料最後一天是 9/21，就分析 8/1 到 9/21。</div>
     <div class="kpis" id="src-kpis"></div>
     <div class="caption" id="src-caption"></div>
-    <div class="log" id="log">1. 選擇 AIO 匯出檔（.xlsx，工作表 AllInOneData）
+    <div class="caption" id="src-period" style="font-weight:700;color:var(--btn)"></div>
+    <div class="log" id="log" data-t="1. 選擇 AIO 匯出檔（.xlsx，工作表 AllInOneData）
+2. 按「載入並分析」，第一次約 1 分鐘（分析在你的瀏覽器裡進行，檔案不會上傳到任何伺服器）
+3. 到各分頁查看，或在「報表與分析」下載 Excel／PPT">1. 選擇 AIO 匯出檔（.xlsx，工作表 AllInOneData）
 2. 按「載入並分析」，第一次約 1 分鐘（分析在你的瀏覽器裡進行，檔案不會上傳到任何伺服器）
 3. 到各分頁查看，或在「報表與分析」下載 Excel／PPT</div>
     <div id="src-status" style="display:none">
-      <div class="section">各狀態在途件數</div>
+      <div class="section" id="src-status-title" data-t="各狀態在途件數">各狀態在途件數</div>
       <div class="two"><div class="tbl" id="src-status-tbl"></div><div class="bars" id="src-status-chart"></div></div>
     </div>
   </section>
@@ -121,107 +175,128 @@
   <!-- 需求規劃 -->
   <section class="tab" id="tab-demand">
     <div class="row">
-      <label>彙總依<select id="d-by"><option>國家</option><option>類型分組</option></select></label>
-      <label>預測未來（週）<input type="number" id="d-weeks" min="1" max="13" value="4" style="width:80px"></label>
-      <button class="btn" id="d-run">重新計算</button>
+      <label><span data-t="彙總依：">彙總依：</span><select id="d-by" data-t-opts><option value="國家">國家</option><option value="類型分組">類型分組</option></select></label>
+      <label><span data-t="預測未來（週）：">預測未來（週）：</span><input type="number" id="d-weeks" min="1" max="13" value="4" style="width:80px"></label>
+      <button class="btn" id="d-run" data-t="重新計算">重新計算</button>
     </div>
-    <div class="section">每週申請零件顆數（完整週）</div>
+    <div class="section" data-t="每週申請零件顆數（完整週）">每週申請零件顆數（完整週）</div>
     <div class="two"><div class="tbl" id="d-weekly"></div><div class="bars" id="d-chart"></div></div>
-    <div class="row"><button class="btn" id="d-weekly-dl">匯出 Excel</button></div>
-    <div class="section" id="d-fc-title">未來 4 週需求推估（最近 4 個完整週平均 × 週數；高峰＝最高週 × 週數）</div>
+    <div class="row"><button class="btn" id="d-weekly-dl" data-t="匯出上表">匯出上表</button></div>
+    <div class="section" id="d-fc-title"></div>
     <div class="tbl" id="d-forecast"></div>
-    <div class="section">申請次數最多的料號（Top 30）：申請顆數、未使用率、目前待供貨顆數</div>
+    <div class="section" data-t="申請次數最多的料號（Top 30）：申請顆數、未使用率、目前待供貨顆數">申請次數最多的料號（Top 30）：申請顆數、未使用率、目前待供貨顆數</div>
     <div class="tbl tall" id="d-top"></div>
-    <div class="row"><button class="btn" id="d-top-dl">匯出料號表</button></div>
+    <div class="row"><button class="btn" id="d-top-dl" data-t="匯出料號表">匯出料號表</button></div>
   </section>
 
   <!-- 庫存與缺料 -->
   <section class="tab" id="tab-stock">
     <div class="kpis" id="s-kpis"></div>
-    <div class="section">缺料料號（Awaiting Spares 案件中待供貨的料號）</div>
+    <div class="section" data-t="缺料料號（Awaiting Spares 案件中待供貨的料號）">缺料料號（Awaiting Spares 案件中待供貨的料號）</div>
     <div class="tbl" id="s-parts"></div>
-    <div class="row"><button class="btn" id="s-parts-dl">匯出料號清單</button></div>
+    <div class="row"><button class="btn" id="s-parts-dl" data-t="匯出料號清單">匯出料號清單</button></div>
     <div class="row">
-      <label>催料清單：等待天數 ≥<input type="number" id="s-days" min="1" max="60" value="14" style="width:80px"></label>
-      <button class="btn" id="s-run">重新整理</button>
+      <label class="inline"><span data-t="催料清單：等待天數 ≥">催料清單：等待天數 ≥</span><input type="number" id="s-days" min="1" max="60" value="14" style="width:80px"><span data-t="天">天</span></label>
+      <button class="btn" id="s-run" data-t="重新整理">重新整理</button>
     </div>
-    <div class="section" id="s-cases-title">催料案件清單</div>
+    <div class="section" id="s-cases-title" data-t="催料案件清單">催料案件清單</div>
     <div class="tbl tall" id="s-cases"></div>
-    <div class="row"><button class="btn" id="s-cases-dl">匯出催料清單</button></div>
+    <div class="row"><button class="btn" id="s-cases-dl" data-t="匯出催料清單">匯出催料清單</button></div>
   </section>
 
   <!-- 訂單與交期 -->
   <section class="tab" id="tab-po">
-    <div class="caption">AIO 資料沒有採購訂單，這個模組用匯入的訂單檔計算準交率與逾期清單。</div>
+    <div class="caption" data-t="AIO 資料沒有採購訂單，這個模組用匯入的訂單檔計算準交率與逾期清單。">AIO 資料沒有採購訂單，這個模組用匯入的訂單檔計算準交率與逾期清單。</div>
     <div class="row">
-      <button class="btn" id="po-tmpl">下載訂單範本</button>
-      <label>匯入訂單檔（Excel／CSV）<input type="file" id="po-file" accept=".xlsx,.xls,.csv"></label>
+      <button class="btn" id="po-tmpl" data-t="產生訂單範本">產生訂單範本</button>
+      <label><span data-t="匯入訂單檔（Excel／CSV）">匯入訂單檔（Excel／CSV）</span><input type="file" id="po-file" accept=".xlsx,.xls,.csv"></label>
     </div>
     <div class="kpis" id="po-kpis"></div>
     <div id="po-body" style="display:none">
-      <div class="section">供應商準交率</div>
+      <div class="section" data-t="供應商準交率">供應商準交率</div>
       <div class="tbl" id="po-sup"></div>
-      <div class="section">逾期與未交訂單</div>
+      <div class="section" data-t="逾期與未交訂單">逾期與未交訂單</div>
       <div class="tbl" id="po-late"></div>
-      <div class="row"><button class="btn" id="po-late-dl">匯出逾期清單</button></div>
+      <div class="row"><button class="btn" id="po-late-dl" data-t="匯出逾期清單">匯出逾期清單</button></div>
     </div>
   </section>
 
   <!-- 出貨與到貨 -->
   <section class="tab" id="tab-ship">
-    <div class="row">
-      <label>保固到期清單：天數內<input type="number" id="h-days" min="7" max="180" step="7" value="30" style="width:80px"></label>
-      <button class="btn" id="h-run">重新整理</button>
-    </div>
     <div class="kpis" id="h-kpis"></div>
-    <div class="two">
-      <div><div class="section">待出貨積壓（依據點）</div><div class="tbl" id="h-backlog"></div><div class="row"><button class="btn" id="h-backlog-dl">匯出待出貨積壓</button></div></div>
-      <div><div class="section">零件運送中／已配貨（依國家，在途案件）</div><div class="tbl" id="h-transit"></div></div>
+    <div class="row">
+      <label class="inline"><span data-t="保固到期清單：天數內">保固到期清單：天數內</span><input type="number" id="h-days" min="7" max="180" step="7" value="30" style="width:80px"></label>
+      <button class="btn" id="h-run" data-t="重新整理">重新整理</button>
     </div>
-    <div class="section">在途且保固即將到期（含建案時保固內、現已過期）</div>
+    <div class="two"><div class="hbars" id="h-chart-backlog"></div><div class="hbars" id="h-chart-transit"></div></div>
+    <div class="two">
+      <div>
+        <div class="section" data-t="待出貨積壓（依據點）">待出貨積壓（依據點）</div>
+        <div class="hint" id="h-backlog-hint"></div>
+        <div class="tbl" id="h-backlog"></div>
+        <div class="row"><button class="btn" id="h-backlog-dl" data-t="匯出待出貨積壓">匯出待出貨積壓</button></div>
+      </div>
+      <div>
+        <div class="section" data-t="零件運送中／已配貨（依國家，在途案件）">零件運送中／已配貨（依國家，在途案件）</div>
+        <div class="tbl" id="h-transit"></div>
+      </div>
+    </div>
+    <div class="section" id="h-exp-title" data-t="在途且保固即將到期（含建案時保固內、現已過期）">在途且保固即將到期（含建案時保固內、現已過期）</div>
+    <div class="hint" id="h-exp-hint"></div>
     <div class="tbl tall" id="h-exp"></div>
-    <div class="row"><button class="btn" id="h-exp-dl">匯出到期清單</button></div>
+    <div class="row"><button class="btn" id="h-exp-dl" data-t="匯出到期清單">匯出到期清單</button></div>
   </section>
 
   <!-- 報表與分析 -->
   <section class="tab" id="tab-report">
     <div class="report">
       <div>
-        <div class="section">分析項目</div>
+        <div class="section" data-t="分析項目">分析項目</div>
         <div class="alist" id="r-list"></div>
-        <div class="section">匯出</div>
+        <div class="section" data-t="匯出">匯出</div>
         <div class="stack">
-          <button class="btn" id="r-xlsx">匯出 Excel 表格</button>
-          <button class="btn" id="r-pptx">匯出 PPT 報告</button>
-          <button class="btn" id="r-charts">匯出全部圖 PNG（zip）</button>
+          <button class="btn" id="r-xlsx" data-t="匯出 Excel 表格">匯出 Excel 表格</button>
+          <button class="btn" id="r-pptx" data-t="匯出 PPT 報告">匯出 PPT 報告</button>
+          <button class="btn" id="r-charts" data-t="匯出全部圖 PNG">匯出全部圖 PNG</button>
         </div>
       </div>
-      <div id="r-body"><div class="caption">請先載入資料，再從左側選一項分析</div></div>
+      <div id="r-body"><div class="caption" data-t="請先載入資料，再從左側選一項分析">請先載入資料，再從左側選一項分析</div></div>
     </div>
   </section>
 
   <!-- 跨單位協調 -->
   <section class="tab" id="tab-coord">
-    <div class="caption">待辦存在這台電腦的瀏覽器裡（換電腦看不到）。要帶到別台電腦，請用「下載待辦」存成 JSON，再「還原待辦」上傳。</div>
+    <div class="caption" data-t="待辦存在這台電腦的瀏覽器裡（換電腦看不到）。要帶到別台電腦，請用「下載待辦」存成 JSON，再「還原待辦」上傳。">待辦存在這台電腦的瀏覽器裡（換電腦看不到）。要帶到別台電腦，請用「下載待辦」存成 JSON，再「還原待辦」上傳。</div>
     <div class="row">
-      <label>對象單位<select id="c-unit"></select></label>
-      <label>議題<input type="text" id="c-topic" size="50"></label>
-      <label>負責人<input type="text" id="c-owner" size="10"></label>
-      <label>到期日<input type="date" id="c-due"></label>
-      <label>狀態<select id="c-status"><option>進行中</option><option>待回覆</option><option>已完成</option><option>取消</option></select></label>
-      <button class="btn primary" id="c-add">新增</button>
+      <label><span data-t="對象單位">對象單位</span><select id="c-unit" data-t-opts></select></label>
+      <label><span data-t="議題">議題</span><input type="text" id="c-topic" size="50"></label>
+      <label><span data-t="負責人">負責人</span><input type="text" id="c-owner" size="10"></label>
+      <label><span data-t="到期日">到期日</span><input type="date" id="c-due"></label>
+      <label><span data-t="狀態">狀態</span><select id="c-status" data-t-opts></select></label>
+      <button class="btn primary" id="c-add" data-t="新增">新增</button>
     </div>
     <div class="row">
-      <button class="btn" id="c-seed">由分析結論產生待辦</button>
-      <button class="btn" id="c-dl">下載待辦（JSON）</button>
-      <label>還原待辦（JSON）<input type="file" id="c-restore" accept=".json"></label>
-      <button class="btn" id="c-csv">匯出待辦 CSV</button>
+      <button class="btn" id="c-seed" data-t="由分析結論產生待辦">由分析結論產生待辦</button>
+      <button class="btn" id="c-dl" data-t="下載待辦（JSON）">下載待辦（JSON）</button>
+      <label><span data-t="還原待辦（JSON）">還原待辦（JSON）</span><input type="file" id="c-restore" accept=".json"></label>
+      <button class="btn" id="c-csv" data-t="匯出待辦 CSV">匯出待辦 CSV</button>
     </div>
+    <div class="hint" data-t="逾期未完成的待辦會以紅字顯示">逾期未完成的待辦會以紅字顯示</div>
     <div class="tbl tall" id="c-table"></div>
   </section>
 </div>
+
+<div class="modal" id="gloss">
+  <div class="modal-box">
+    <header><span data-t="名詞說明">名詞說明</span><button id="gloss-close" aria-label="close">✕</button></header>
+    <div class="caption" data-t="畫面上標有 ⓘ 的欄位或指標，滑鼠停在上面也會顯示說明。">畫面上標有 ⓘ 的欄位或指標，滑鼠停在上面也會顯示說明。</div>
+    <dl class="modal-body" id="gloss-body"></dl>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
+<!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
 <script src="config.local.js" onerror="void 0"></script>
-<script src="app.js"></script>
+<!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
+<script src="app.js?v=2026-10-10"></script>
 </body>
 </html>
