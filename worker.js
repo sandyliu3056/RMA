@@ -196,7 +196,7 @@ self.onmessage = async (ev) => {
       const pyRows = pyodide.toPy(rows);
       // Python 端的 progress(訊息, 階段, i, n)；None 會變成 undefined
       const onProgress = (m, stage, i, n) => { log(m); if (stage) step("load", stage, "run", i, n); };
-      try { result = JSON.parse(glue.load(pyRows, args.start || null, onProgress, args.period || null, args.ref_date || null)); step("load", "parts", "done"); }
+      try { result = JSON.parse(glue.load(pyRows, args.start || null, onProgress, args.period || null, args.ref_date || null, args.coverage || null)); step("load", "parts", "done"); }
       catch (e) { step("load", "current", "fail"); throw e; }
       finally { pyRows.destroy(); }
     } else if (cmd === "table_xlsx" || cmd === "po_template") {

@@ -3,7 +3,7 @@
 -- 設計
 --   imports         每次匯入的 AIO 檔案一筆：資料日期、檔名、欄位順序、匯入當時的快照指標（案件數、未結案、缺料、待出貨）。
 --                   complete 代表全部列都上傳完成；未完成的匯入（上傳到一半斷線）不會被讀取，可以在畫面上刪掉重存。
---   case_snapshots  每個案件在每次匯入時的版本（CaseID × 資料日期），row 是整列原始值；同一案件以資料日期最新的版本為準。
+--   case_snapshots  每個案件在每次匯入時的版本（匯入 × CaseID），row 是整列原始值；同一案件以資料日期最新的「完成」匯入為準。
 -- 流程（網頁 app.js）：建立 imports（complete=false）→ upsert_cases 分批上傳 → finish_import 一次交易：刪掉同一資料日期的舊匯入、標記完成。
 -- 權限
 --   只有登入的使用者（authenticated，且不是匿名登入）能讀寫；匿名（anon）什麼都看不到。
@@ -35,10 +35,18 @@ create table if not exists public.case_snapshots (
   status      text,
   country     text,
   row         jsonb not null,                    -- 整列原始值（空值已去掉）
-  primary key (case_id, data_date)
+  primary key (import_id, case_id)               -- 每次匯入各自一份，上傳到一半的匯入不會動到別次的資料
 );
+-- 第一版的主鍵是 (case_id, data_date)：升級用
+do $$
+begin
+  if exists (select 1 from pg_indexes where schemaname = 'public' and tablename = 'case_snapshots'
+             and indexname = 'case_snapshots_pkey' and indexdef like '%(case_id, data_date)%') then
+    alter table public.case_snapshots drop constraint case_snapshots_pkey;
+    alter table public.case_snapshots add primary key (import_id, case_id);
+  end if;
+end $$;
 create index if not exists case_snapshots_create_date_idx on public.case_snapshots (create_date);
-create index if not exists case_snapshots_import_idx on public.case_snapshots (import_id);
 create index if not exists case_snapshots_latest_idx on public.case_snapshots (case_id, data_date desc);
 
 -- 角色（Supabase 已有 anon / authenticated；這段只是讓同一份 SQL 也能在一般 PostgreSQL 上測試）
@@ -67,7 +75,7 @@ grant usage, select on all sequences in schema public to authenticated;
 grant usage on schema public to authenticated;
 
 -- 寫入一批案件（網頁每次送 1,000 列）到「還沒完成」的匯入：p_rows = [{case_id, create_date, close_date, status, country, row}, …]
--- 日期用「YYYY-MM-DD HH:MM:SS」字串；同一批裡重複的 CaseID 以最後一列為準；同一案件同一資料日期已存在就覆蓋。回傳寫入列數。
+-- 日期用「YYYY-MM-DD HH:MM:SS」字串；同一批裡重複的 CaseID 以最後一列為準；同一次匯入已有的案件就覆蓋。回傳寫入列數。
 create or replace function public.upsert_cases(p_import_id bigint, p_rows jsonb)
 returns integer
 language plpgsql
@@ -95,8 +103,8 @@ begin
     order by r.v->>'case_id', r.ord desc
   ) as d
   where i.id = p_import_id
-  on conflict (case_id, data_date) do update
-    set import_id = excluded.import_id, create_date = excluded.create_date, close_date = excluded.close_date,
+  on conflict (import_id, case_id) do update
+    set data_date = excluded.data_date, create_date = excluded.create_date, close_date = excluded.close_date,
         status = excluded.status, country = excluded.country, row = excluded.row;
   get diagnostics n = row_count;
   update public.imports
