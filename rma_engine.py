@@ -144,9 +144,12 @@ def prepare(df, period_start=None, ref_date=None):
     last_full_week_end = ref_date - pd.Timedelta(days=ref_date.weekday() + 1)
     cal_full = (d["建案週"] >= period_start) & (d["建案週"] + pd.Timedelta(days=6) <= last_full_week_end)
 
-    days_per_week = d[cal_full].groupby("建案週")["CreateDate"].apply(lambda s: s.dt.normalize().nunique())
-    vol_per_week = d[cal_full].groupby("建案週").size()
-    ok_weeks = vol_per_week[(days_per_week >= 6) & (vol_per_week >= 0.7 * vol_per_week[days_per_week >= 6].median())].index
+    if cal_full.any():
+        days_per_week = d[cal_full].groupby("建案週")["CreateDate"].apply(lambda s: s.dt.normalize().nunique())
+        vol_per_week = d[cal_full].groupby("建案週").size()
+        ok_weeks = vol_per_week[(days_per_week >= 6) & (vol_per_week >= 0.7 * vol_per_week[days_per_week >= 6].median())].index
+    else:   # 期間裡沒有任何完整週（例如季初的前幾天）
+        ok_weeks = []
     d["完整週"] = cal_full & d["建案週"].isin(ok_weeks)
     d["類型分組"] = np.where(d["Type"].isin(MAIN_TYPES), d["Type"], "Other")
     d["重複維修"] = (d["同序號案件數"] >= 2).astype(int)
@@ -1087,8 +1090,10 @@ def top_parts(parts, n=30):
     """申請次數最多的料號：申請顆數、案件數、未使用率、缺料中顆數、主要國家。"""
     # 向量化計算（逐群 lambda 在瀏覽器版會慢十幾秒）
     code = parts["狀態碼"]
+    # 待供貨／運送中只算還沒結案的案件（已結案的零件狀態碼是舊的，例如資料庫合併時推定結案的案件）
+    open_ = ~parts["已結案"] if "已結案" in parts.columns else True
     flags = pd.DataFrame({"已使用": code.eq("C"), "未使用退回": code.eq("U"), "零件DOA": code.eq("D"),
-                          "待供貨": code.eq("R"), "運送中": code.eq("I")}, index=parts.index)
+                          "待供貨": code.eq("R") & open_, "運送中": code.eq("I") & open_}, index=parts.index)
     g = parts.groupby("料號").agg(申請顆數=("CaseID", "size"), 案件數=("CaseID", "nunique"))
     g = g.join(flags.groupby(parts["料號"]).sum().astype(int))
     g["未使用率"] = g["未使用退回"] / (g["已使用"] + g["未使用退回"]).replace(0, np.nan)

@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-11a";
+  const V = "2026-10-11b";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -242,7 +242,7 @@
     if (/NOT_LOGGED_IN/.test(m)) return t("請先登入資料庫");
     if (/SESSION_EXPIRED|JWT expired|invalid JWT|HTTP 401/i.test(m)) return t("登入已過期，請重新登入");
     if (/Invalid login credentials|invalid_credentials|invalid_grant/i.test(m)) return t("帳號或密碼不對");
-    if (/Failed to fetch|NetworkError|Load failed|net::ERR_/i.test(m)) return t("連不上資料庫（網址不對或沒有網路）");
+    if (/Failed to fetch|NetworkError|Load failed|net::ERR_|HTTP 5\d\d/i.test(m)) return t("連不上資料庫：網址不對、沒有網路，或免費方案的專案閒置一週後被暫停（到 Supabase 後台按 Restore）。");
     return friendly(e);
   }
   function clampInput(el, def) {
@@ -843,15 +843,20 @@
   const DB = window.RMADB || null;
   let imports = [];
   let source = "file";   // 目前的資料來自 file（匯出檔）或 db（資料庫）
+  let dbBusy = false;    // 存入／載入進行中：不准再按
   function dbConfigured() { return !!(DB && DB.configured()); }
+  const doneImports = () => imports.filter((i) => i.complete);   // 上傳完成的匯入才算數
   function dbUI() {
-    const user = dbConfigured() ? DB.user() : null;
-    $("db-status").textContent = !dbConfigured() ? "" : user ? t("已登入：") + user : t("請登入資料庫（帳號由管理員建立）");
-    $("db-note").textContent = dbConfigured() ? "" : t("尚未設定資料庫：照 README 的「資料庫（Supabase）」一節建立專案，再把網址與金鑰填進 config.js。");
-    $("db-login-form").style.display = dbConfigured() && !user ? "" : "none";
+    const on = dbConfigured();
+    const user = on ? DB.user() : null;
+    // 沒設定資料庫（config.js 留空）的網站：整個面板不出現，設定方法在 README
+    $("db-panel").style.display = on ? "" : "none";
+    $("db-status").textContent = !on ? "" : user ? t("已登入：") + user : t("請登入資料庫（帳號由管理員建立）");
+    $("db-login-form").style.display = on && !user ? "" : "none";
     $("db-actions").style.display = user ? "" : "none";
     $("db-history").style.display = user && imports.length ? "block" : "none";
-    $("db-save").disabled = !(user && loaded && source === "file");
+    $("db-save").disabled = dbBusy || !(user && loaded && source === "file");
+    $("db-load").disabled = dbBusy;
   }
   function fmtTs(iso) {
     if (!iso) return "";
@@ -865,12 +870,14 @@
     const heads = ["資料日期", "檔名", "案件數", "在途", "缺料", "匯入者", "匯入時間", ""];
     let h = "<table><thead><tr>" + heads.map((c, i) => `<th class="${i >= 2 && i <= 4 ? "num" : ""}">${esc(c ? t(c) : "")}</th>`).join("") + "</tr></thead><tbody>";
     for (const i of imports) {
-      h += `<tr><td>${esc(i.data_date)}</td><td title="${esc(i.file_name || "")}">${esc(i.file_name || "")}</td><td class="num">${(k(i, "cases") || Number(i.row_count || 0)).toLocaleString()}</td>` +
-        `<td class="num">${k(i, "open").toLocaleString()}</td><td class="num">${k(i, "shortage").toLocaleString()}</td><td>${esc(i.imported_by || "")}</td><td>${esc(fmtTs(i.imported_at))}</td>` +
+      const bad = !i.complete;   // 上傳到一半斷掉的：不會被讀取，只能刪掉重存
+      h += `<tr${bad ? ' class="warn"' : ""}><td>${esc(i.data_date)}</td><td title="${esc(i.file_name || "")}">${esc(i.file_name || "")}${bad ? ` <b>(${esc(t("未完成"))})</b>` : ""}</td>` +
+        `<td class="num">${(bad ? Number(i.row_count || 0) : (k(i, "cases") || Number(i.row_count || 0))).toLocaleString()}</td>` +
+        `<td class="num">${bad ? "" : k(i, "open").toLocaleString()}</td><td class="num">${bad ? "" : k(i, "shortage").toLocaleString()}</td><td>${esc(i.imported_by || "")}</td><td>${esc(fmtTs(i.imported_at))}</td>` +
         `<td><button class="btn sm db-del" data-id="${esc(i.id)}" data-date="${esc(i.data_date)}">${esc(t("刪除"))}</button></td></tr>`;
     }
     el.innerHTML = h + "</tbody></table>";
-    const asc = imports.slice().sort((a, b) => String(a.data_date).localeCompare(String(b.data_date)));
+    const asc = doneImports().sort((a, b) => String(a.data_date).localeCompare(String(b.data_date)));
     renderBars($("db-chart"), asc.map((i) => i.data_date), asc.map((i) => k(i, "open")), { title: t("歷次匯入的未結案件數"), ylabel: t("件數"), note: t("每根長條是那次匯入時的未結案件數（整份檔案，不受分析期間影響）。") });
   }
   async function refreshImports() {
@@ -889,57 +896,74 @@
   }
   async function dbSave() {
     if (!loaded || source !== "file") { toast(t("從資料庫載入的資料不需要再存；請載入 AIO 匯出檔後再存。"), 6000); return; }
+    if (dbBusy) return;
+    dbBusy = true; dbUI();
     busy($("db-save"), true, t("存入中…"));
+    let imp = null;   // 這次建立的匯入紀錄；沒上傳完就刪掉，免得被當成最新資料
     try {
       const p = await call("db_payload", {});
-      const existing = imports.find((i) => i.data_date === p.data_date);
+      imports = (await DB.listImports()) || []; renderImports();   // 用最新的清單判斷，別人剛存的也看得到
+      const done = doneImports();
+      const existing = done.find((i) => i.data_date === p.data_date);
       if (existing && !confirm(tf("資料庫已經有 {0} 的匯入（{1}），要覆蓋嗎？", p.data_date, existing.file_name || ""))) return;
+      const newest = done[0];
+      const prev = newest && newest.kpis ? Number(newest.kpis.cases || 0) : 0;
+      if (!existing && prev && p.kpis.cases < prev * 0.5 &&
+          !confirm(tf("這份檔案只有 {0} 件，比上一次匯入（{1} 件）少很多。只有完整的 AIO 匯出檔才能存（沒出現在最新匯出裡的未結案件會被視為已結案），確定要存嗎？", p.kpis.cases.toLocaleString(), prev.toLocaleString()))) return;
       startPhase("save"); onStep({ phase: "save", id: "meta", state: "run" });
-      if (existing) await DB.deleteImport(existing.id);
-      const imp = await DB.createImport({ data_date: p.data_date, file_name: curFile, row_count: 0, columns: p.columns, kpis: p.kpis, imported_by: DB.user() });
+      imp = await DB.createImport({ data_date: p.data_date, file_name: curFile, row_count: 0, columns: p.columns, kpis: p.kpis, imported_by: DB.user() });
       onStep({ phase: "save", id: "meta", state: "done" }); onStep({ phase: "save", id: "rows", state: "run", i: 0, n: p.rows.length });
       await DB.upsertCases(imp.id, p.rows, (i, n) => { onStep({ phase: "save", id: "rows", state: "run", i, n }); log(tf("已存入資料庫：{0} 件", i)); });
+      // 全部上傳完才算數：資料庫端一次交易換掉同一天的舊匯入
+      const n = await DB.finishImport(imp.id);
+      imp = null;
       onStep({ phase: "save", id: "rows", state: "done" });
-      toast(tf("已存入資料庫：{0} 件", p.rows.length));
-      await refreshImports();
+      toast(tf("已存入資料庫：{0} 件", Number(n) || p.rows.length));
     } catch (e) {
+      if (imp) { try { await DB.deleteImport(imp.id); } catch (e2) { /* 留著也不會被讀取，畫面會標「未完成」 */ } }
       log(t("錯誤：") + e.message); toast(t("存入資料庫失敗：") + dbFriendly(e), 8000);
-      phaseDone = "fail"; renderSteps(loadPct());
-    } finally { busy($("db-save"), false); dbUI(); }
+      if (phase === "save") { phaseDone = "fail"; renderSteps(loadPct()); }
+    } finally { dbBusy = false; busy($("db-save"), false); await refreshImports(); }
   }
   async function dbLoad() {
     if (!ready) { toast(t("瀏覽器版 Python 還在啟動")); return; }
+    if (dbBusy) return;
     const pa = periodArgs();
     if (!pa) return;
+    dbBusy = true; dbUI();
     busy($("db-load"), true, t("載入中…"));
     setT($("status"), "載入中…");
     startPhase("load"); stepLabel.read = "從資料庫讀取"; onStep({ phase: "load", id: "read", state: "run" });
     try {
       imports = (await DB.listImports()) || [];
       renderImports();
-      if (!imports.length) throw new Error(t("資料庫裡還沒有匯入任何檔案"));
-      const refDate = imports.reduce((m, i) => (String(i.data_date) > m ? String(i.data_date) : m), "");
-      const r = await call("period_from", { period: pa.period, custom: pa.start, ref_date: refDate });
+      const done = doneImports();
+      if (!done.length) throw new Error(t("資料庫裡還沒有匯入任何檔案"));
+      const dates = done.map((i) => String(i.data_date)).sort();
+      const refDate = dates[dates.length - 1], oldest = dates[0];
+      // 期間：最早只到資料庫涵蓋的範圍（最舊一次匯入的前一個月 1 日；更早結案的案件不在任何匯出檔裡）
+      const r = await call("period_from", { period: pa.period, custom: pa.start, ref_date: refDate, min_data_date: oldest });
+      if (r.clamped) { log(tf("資料庫自 {0} 起累積，分析期間從這天開始。", r.coverage)); toast(tf("資料庫自 {0} 起累積，分析期間從這天開始。", r.coverage), 6000); }
       log(`${t("從資料庫讀取")} ${r.from || "…"} → ${refDate}`);
       const objs = await DB.fetchCases(r.from, null, (n) => { log(tf("已下載 {0} 件…", n.toLocaleString())); });
-      // 欄位順序：各次匯入的欄位聯集（新的在前，CaseID 永遠第一欄），最後加 _data_date
+      // 欄位順序：各次匯入的欄位聯集（新的在前，CaseID 永遠第一欄），最後加 _data_date；其他 _ 開頭的是分頁用欄位，不進資料
       const cols = ["CaseID"];
-      for (const i of imports) for (const c of (Array.isArray(i.columns) ? i.columns : [])) if (c && !cols.includes(c)) cols.push(c);
-      for (const o of objs) for (const c of Object.keys(o)) if (c !== "_data_date" && !cols.includes(c)) cols.push(c);
+      for (const i of done) for (const c of (Array.isArray(i.columns) ? i.columns : [])) if (c && !cols.includes(c) && !c.startsWith("_")) cols.push(c);
+      for (const o of objs) for (const c of Object.keys(o)) if (!c.startsWith("_") && !cols.includes(c)) cols.push(c);
       const rows = [cols.concat(["_data_date"])].concat(objs.map((o) => cols.map((c) => (o[c] === undefined ? null : o[c])).concat([o._data_date || null])));
       onStep({ phase: "load", id: "read", state: "done" });
-      const s = await call("load", { rows, period: pa.period, start: pa.start, ref_date: refDate });
-      loaded = true; source = "db"; curFile = tf("資料庫（{0} 次匯入）", imports.length);
+      const s = await call("load", { rows, period: pa.period, start: pa.start, ref_date: refDate, coverage: r.coverage });
+      loaded = true; source = "db"; curFile = tf("資料庫（{0} 次匯入）", done.length);
       resetTabs(); renderSummary(s); refreshActive();
       log(t("完成。"));
     } catch (e) {
       log(t("錯誤：") + e.message); toast(t("載入失敗：") + dbFriendly(e), 8000);
       setT($("status"), "載入失敗");
       phaseDone = "fail"; renderSteps(loadPct());
-    } finally { busy($("db-load"), false); dbUI(); }
+    } finally { dbBusy = false; busy($("db-load"), false); dbUI(); }
   }
   async function dbInit() {
-    if (!dbConfigured()) { dbUI(); return; }
+    if (!dbConfigured()) { dbUI(); if (DB) console.info("資料庫未設定：照 README 的「資料庫（Supabase）」一節建立專案，再把網址與金鑰填進 config.js。"); return; }
     try { await DB.restore(); } catch (e) { /* 沒有登入就算了 */ }
     dbUI();
     if (DB.user()) refreshImports();
@@ -952,7 +976,7 @@
     $("db-save").addEventListener("click", dbSave);
     $("db-load").addEventListener("click", dbLoad);
     $("db-imports").addEventListener("click", async (e) => {
-      const b = e.target.closest(".db-del"); if (!b) return;
+      const b = e.target.closest(".db-del"); if (!b || dbBusy) return;
       if (!confirm(tf("要刪除 {0} 的匯入嗎？那次匯入的案件版本會一併刪除（更早匯入的版本不受影響）。", b.dataset.date))) return;
       try { await DB.deleteImport(b.dataset.id); toast(t("已刪除")); } catch (err) { toast(dbFriendly(err), 6000); }
       refreshImports();

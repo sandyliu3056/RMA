@@ -52,7 +52,7 @@ python rma_engine.py "0820-0921 AIO data.xlsx" 輸出資料夾 --lang en
 ## 網頁版：任何裝置開瀏覽器就能用（Vercel／GitHub Pages）
 
 `index.html` + `app.js` + `worker.js` + `web_glue.py` 是純靜態的網頁版：用 Pyodide 把 Python 搬進瀏覽器，
-`rma_engine.py` 與 `i18n.py` 直接在使用者的瀏覽器裡執行，**AIO 檔案不會上傳到任何伺服器**。所以只要能放靜態檔案的地方都能架：Vercel、GitHub Pages、Netlify 都可以。
+`rma_engine.py` 與 `i18n.py` 直接在使用者的瀏覽器裡執行，**AIO 檔案不會上傳到任何伺服器**（除非你設定了下面的資料庫並按「存入資料庫」）。所以只要能放靜態檔案的地方都能架：Vercel、GitHub Pages、Netlify 都可以。
 
 - 標題列的下拉選單：**中文／English**、縮放（90–125%）、字型（手寫風／正黑體／等寬）、主題（棕金／深藍／墨綠）、時區（時鐘顯示）。選擇都記在瀏覽器裡，下次開啟沿用。
 - 語言切換與 **名詞說明** 立即生效，不必等瀏覽器版 Python 啟動（介面字典預先產生在 `ui_strings.js`）；資料載入後切換語言，表格、KPI、分析文字、匯出的 Excel／PPT 會重新以該語言產生（幾秒）。
@@ -88,18 +88,20 @@ openpyxl、python-pptx 等純 Python 套件放在 `wheels/`，網頁自己載入
 
 ## 資料庫（Supabase）：留存每次匯入，看多期趨勢
 
-一份 AIO 匯出檔只有「目前未結案 ＋ 最近一個月結案」的案件，單檔最多看一個多月。把每次匯入存進 Supabase 之後，「從資料庫載入」就能選本季、最近 6 個月、全部歷史；同一個案件以最新一次匯出的狀態為準，當時未結案、卻沒再出現在最新匯出裡的案件視為已結案（結案日不明，不算 SLA），畫面會標出件數。
+一份 AIO 匯出檔只有「目前未結案 ＋ 最近一個月結案」的案件，單檔最多看一個多月。把每次匯入存進 Supabase 之後，「從資料庫載入」就能選本季、最近 6 個月、全部歷史；同一個案件以最新一次匯出的狀態為準，當時未結案、卻沒再出現在最新匯出裡的案件視為已結案（結案日不明，維修還沒完成的不算 SLA），畫面會標出件數。
+
+要讓這個規則成立，**請至少每 3～4 週存一次完整的 AIO 匯出檔**（每週更保險）：中間漏掉的結案視窗，裡面的案件會被當成「已結案但結案日不明」。分析期間最早只到最舊一次匯入的前一個月 1 日（更早結案的案件不在任何檔案裡），畫面會提示。重複維修（同序號）在資料庫模式只算分析期間內的案件。
 
 設定一次即可（約十分鐘）：
 
 1. 到 [supabase.com](https://supabase.com) 建立專案（免費方案即可），記下資料庫密碼。
 2. 左側 **SQL Editor** → New query → 貼上 `supabase/schema.sql` 的全部內容 → Run。這會建立 `imports`（匯入紀錄）與 `case_snapshots`（案件快照）兩張表、列級安全規則，以及 `upsert_cases`、`get_cases` 兩個函式。
-3. **Authentication → Sign In / Providers → Email**：關閉「Allow new users to sign up」；再到 **Authentication → Users → Add user** 建立同事的 email 與密碼（也可以之後再加）。
-4. **Project Settings → API**：複製 Project URL 與 anon public key，填進 `config.js` 的 `supabaseUrl`、`supabaseKey`，推上 GitHub（Pages／Vercel 會自動重新部署）。anon key 本來就是公開的，資料靠列級安全規則保護：沒登入的人什麼都讀不到。
+3. **Authentication → Sign In / Providers**：在 User Signups 關閉「Allow new users to sign up」與「Allow anonymous sign-ins」；再到 **Authentication → Users → Add user** 建立同事的 email 與密碼（也可以之後再加）。忘記密碼由管理員在同一頁重設；**Authentication → URL Configuration** 的 Site URL 填網站網址。
+4. **Project Settings → Data API**（舊版叫 API）：複製 Project URL；**Project Settings → API Keys** 複製 anon public key（新版叫 publishable key，用法相同），填進 `config.js` 的 `supabaseUrl`、`supabaseKey`，推上 GitHub（Pages／Vercel 會自動重新部署）。這把 key 本來就是公開的，資料靠列級安全規則保護：沒登入的人什麼都讀不到。
 
-之後的流程：資料來源頁登入 → 照常載入檔案 → 按「把這份檔案存入資料庫」（兩萬件約一分鐘，分批上傳，進度在步驟面板）→ 下次直接「從資料庫載入」並選分析期間。「匯入紀錄」列出每次匯入的資料日期、案件數、未結案與缺料件數，旁邊的圖是歷次匯入的未結案件數；同一個資料日期再存一次會先問要不要覆蓋；刪除某一次匯入只會刪掉那次的案件版本，更早匯入的版本不受影響。
+之後的流程：資料來源頁登入 → 照常載入檔案 → 按「把這份檔案存入資料庫」（兩萬件約一分鐘，分批上傳，進度在步驟面板；全部上傳完才算數，中途斷線的匯入會標成「未完成」、不會被讀取，刪掉重存即可）→ 下次直接「從資料庫載入」並選分析期間。「匯入紀錄」列出每次匯入的資料日期、案件數、未結案與缺料件數，旁邊的圖是歷次匯入的未結案件數；同一個資料日期再存一次會先問要不要覆蓋（新檔上傳完成後才換掉舊的）；刪除某一次匯入只會刪掉那次的案件版本，更早匯入的版本不受影響。
 
-容量：每次匯入約兩萬列、幾十 MB；免費方案的 500 MB 大約可放一年多的月匯入，不夠時升級方案或刪掉最舊的匯入。
+容量與方案：每次匯入約兩萬列、資料庫裡約 30～40 MB；免費方案的 500 MB 大約可放一年的月匯入，不夠時升級方案或刪掉最舊的匯入。每次「從資料庫載入」會下載該期間全部案件（約每萬件 15 MB），免費方案每月 5 GB 流量夠一個小團隊用。注意：**免費方案的專案一週沒有任何請求就會被暫停**，要到 Supabase 後台按 Restore 才能再用；團隊共用建議用付費方案。以後若更新 `supabase/schema.sql`，再到 SQL Editor 重跑一次即可（內容可以重複執行）。
 
 ## 資料規則
 

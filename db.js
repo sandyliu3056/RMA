@@ -19,6 +19,8 @@
     KEY = String((cfg && cfg.supabaseKey) || "").trim();
     sess = configured() ? loadSess() : null;
   }
+  // 另一個分頁登入／登出／換了 token：跟著用最新的（refresh token 只能用一次，兩個分頁各自換會互相踢掉）
+  try { window.addEventListener("storage", (e) => { if (e.key === SKEY) sess = loadSess(); }); } catch (e) { /* 沒有 window 就算了 */ }
   function configured() { return !!(BASE && KEY); }
   function user() { return sess ? (sess.email || "") : null; }
 
@@ -51,16 +53,20 @@
     saveSess(null);
     if (s) { try { await auth("logout", {}, s.access_token); } catch (e) { /* 本機已登出即可 */ } }
   }
-  /* 取得有效的 access token；快過期就換新，換不到就視為登出。
+  /* 取得有效的 access token；快過期就換新。
+   * 只有 Supabase 明確拒絕 refresh token（4xx）才算登出；網路不通或伺服器錯誤就把原本的錯誤丟回去，登入狀態保留。
    * 同時有多個請求時只換一次（refresh token 只能用一次，重複用會被拒絕）。 */
   let refreshing = null;
-  async function token() {
+  async function token(force) {
     if (!sess) throw new Error("NOT_LOGGED_IN");
-    if (Date.now() > sess.expires_at - 60000) {
+    if (force || Date.now() > sess.expires_at - 60000) {
       if (!refreshing) {
+        const fresh = loadSess();   // 別的分頁可能已經換過 token
+        if (fresh && fresh.refresh_token !== sess.refresh_token && fresh.expires_at > sess.expires_at) sess = fresh;
+        if (!force && Date.now() <= sess.expires_at - 60000) return sess.access_token;
         refreshing = auth("token?grant_type=refresh_token", { refresh_token: sess.refresh_token })
           .then(setFromToken)
-          .catch((e) => { saveSess(null); throw new Error("SESSION_EXPIRED"); })
+          .catch((e) => { if (/\(HTTP 4\d\d\)/.test(e.message)) { saveSess(null); throw new Error("SESSION_EXPIRED"); } throw e; })
           .finally(() => { refreshing = null; });
       }
       await refreshing;
@@ -68,20 +74,30 @@
     }
     return sess.access_token;
   }
-  async function rest(method, path, body, prefer) {
+  async function rest(method, path, body, prefer, retried) {
     const tk = await token();
     const headers = { apikey: KEY, Authorization: "Bearer " + tk, "Content-Type": "application/json" };
     if (prefer) headers.Prefer = prefer;
-    return parse(await fetch(`${BASE}/rest/v1/${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }));
+    try {
+      return await parse(await fetch(`${BASE}/rest/v1/${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }));
+    } catch (e) {
+      // token 被拒絕（例如密碼改了、在別處登出）：換一次新的再試；還是不行就視為登出
+      if (/\(HTTP 401\)/.test(e.message) && !retried) { await token(true); return rest(method, path, body, prefer, true); }
+      if (/\(HTTP 401\)/.test(e.message)) { saveSess(null); throw new Error("SESSION_EXPIRED"); }
+      throw e;
+    }
   }
 
   window.RMADB = {
     configure, configured, user, login, logout,
     /* 頁面開啟時：還原上次的登入（會順便確認 token 還有效） */
     async restore() { if (!sess) return null; try { await token(); return user(); } catch (e) { return null; } },
-    listImports() { return rest("GET", "imports?select=*&order=data_date.desc"); },
+    /* 匯入紀錄（含沒上傳完的，complete=false），新的在前 */
+    listImports() { return rest("GET", "imports?select=*&order=data_date.desc,id.desc"); },
     createImport(rec) { return rest("POST", "imports", rec, "return=representation").then((a) => (Array.isArray(a) ? a[0] : a)); },
     deleteImport(id) { return rest("DELETE", "imports?id=eq." + encodeURIComponent(id)); },
+    /* 全部列上傳完成後：一次交易刪掉同一資料日期的舊匯入、標記完成（資料庫端的 finish_import） */
+    finishImport(id) { return rest("POST", "rpc/finish_import", { p_import_id: id }); },
     /* 分批寫入案件（每批 1,000 列）；onProgress(已送, 全部) */
     async upsertCases(importId, rows, onProgress, batch) {
       const B = batch || 1000;
@@ -92,15 +108,20 @@
       }
       return n;
     },
-    /* 讀取期間內的案件（每個 CaseID 最新版本），分頁 5,000 列；onProgress(已下載) */
+    /* 讀取期間內的案件（每個 CaseID 最新版本），每頁 5,000 列，用上一頁最後的 CaseID 接著讀（鍵集分頁）；onProgress(已下載) */
     async fetchCases(from, to, onProgress, limit) {
       const L = limit || 5000;
       const out = [];
-      for (let off = 0; ; off += L) {
-        const page = await rest("POST", "rpc/get_cases", { p_from: from || null, p_to: to || null, p_offset: off, p_limit: L });
-        if (Array.isArray(page)) out.push(...page);
+      let after = "";
+      for (;;) {
+        const page = await rest("POST", "rpc/get_cases", { p_from: from || null, p_to: to || null, p_after: after, p_limit: L });
+        if (!Array.isArray(page) || !page.length) break;
+        out.push(...page);
         if (onProgress) onProgress(out.length);
-        if (!Array.isArray(page) || page.length < L) break;
+        const last = page[page.length - 1];
+        const next = last && last._case_id != null ? String(last._case_id) : "";
+        if (page.length < L || !next || next <= after) break;
+        after = next;
       }
       return out;
     },
