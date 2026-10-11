@@ -151,7 +151,7 @@ function readSheet(buf, preferName) {
 // 這些指令只需要第一段；其他（圖表、匯出、表格的 Excel）要等第二段
 const LIGHT = new Set(["boot", "ui_lang", "load", "set_lang", "summary", "conclusions", "ui", "glossary",
                        "tab_demand", "tab_stock", "tab_ship", "analysis", "analysis_table", "po", "po_result",
-                       "table_data", "po_template_table"]);
+                       "table_data", "po_template_table", "db_meta", "db_payload", "period_from"]);
 
 /* 表格匯出：Python 給純資料，這裡用 SheetJS 寫成 xlsx（不需要 openpyxl，不必等背景套件） */
 function sheetB64(td) {
@@ -181,15 +181,22 @@ self.onmessage = async (ev) => {
       M = MSG[args && args.lang === "en" ? "en" : "zh"];
       result = true;
     } else if (cmd === "load") {
-      step("load", "read", "run");
-      log(M.reading);
-      const rows = readSheet(args.buffer, "AllInOneData");
-      log(fmt(M.rows, rows.length.toLocaleString()));
-      step("load", "read", "done");
+      // 來源：Excel 檔（args.buffer）或從資料庫組回來的列（args.rows，主畫面已經讀好）
+      let rows;
+      if (args.rows) {
+        rows = args.rows;
+        log(fmt(M.rows, Math.max(0, rows.length - 1).toLocaleString()));
+      } else {
+        step("load", "read", "run");
+        log(M.reading);
+        rows = readSheet(args.buffer, "AllInOneData");
+        log(fmt(M.rows, rows.length.toLocaleString()));
+        step("load", "read", "done");
+      }
       const pyRows = pyodide.toPy(rows);
       // Python 端的 progress(訊息, 階段, i, n)；None 會變成 undefined
       const onProgress = (m, stage, i, n) => { log(m); if (stage) step("load", stage, "run", i, n); };
-      try { result = JSON.parse(glue.load(pyRows, args.start || null, onProgress)); step("load", "parts", "done"); }
+      try { result = JSON.parse(glue.load(pyRows, args.start || null, onProgress, args.period || null, args.ref_date || null)); step("load", "parts", "done"); }
       catch (e) { step("load", "current", "fail"); throw e; }
       finally { pyRows.destroy(); }
     } else if (cmd === "table_xlsx" || cmd === "po_template") {

@@ -10,6 +10,7 @@
 | `零件規劃平台.py` | 桌面程式（tkinter）。七個分頁對應工作架構的模組，所有數字來自引擎。 |
 | `index.html`、`app.js`、`worker.js`、`web_glue.py`、`ui_strings.js`、`scene.js` | 瀏覽器版。用 Pyodide 把同一個引擎搬進瀏覽器執行；`ui_strings.js` 由 `make_ui_strings.py` 從 `i18n.py` 產生；`scene.js` 是資料來源頁的貨場動畫（與 UPS Reprice Platform 同一段程式，天色依時區當地時間變化，點貓狗或工人會有反應）。 |
 | `countries.js`、`flags/`、`world.js` | 國旗與世界地圖：`countries.js` 是 AIO 國家寫法 → ISO 代碼與座標的對照表（新國家加在這裡，旗子放到 `flags/<iso2>.svg`，取自 lipis/flag-icons，MIT）；`world.js` 是各國輪廓（Natural Earth 110m，公有領域）。 |
+| `db.js`、`config.js`、`supabase/schema.sql` | 資料庫（Supabase）：留存每次匯入，才看得到多期趨勢。`config.js` 填專案網址與 anon key；`supabase/schema.sql` 在 Supabase 的 SQL Editor 執行一次（見下面「資料庫（Supabase）」）。 |
 | `web_app.py` | Streamlit 版（需要能跑 Python 的主機），只有中文介面。 |
 
 ## 安裝（Python 版）
@@ -84,6 +85,21 @@ openpyxl、python-pptx 等純 Python 套件放在 `wheels/`，網頁自己載入
 - Excel／PPT／圖都是按鈕下載。
 
 另外還有一個 Streamlit 版 `web_app.py`（需要能跑 Python 的主機，例如 Streamlit Community Cloud：`streamlit run web_app.py`），功能相同但只有中文介面，給有伺服器的情況用。
+
+## 資料庫（Supabase）：留存每次匯入，看多期趨勢
+
+一份 AIO 匯出檔只有「目前未結案 ＋ 最近一個月結案」的案件，單檔最多看一個多月。把每次匯入存進 Supabase 之後，「從資料庫載入」就能選本季、最近 6 個月、全部歷史；同一個案件以最新一次匯出的狀態為準，當時未結案、卻沒再出現在最新匯出裡的案件視為已結案（結案日不明，不算 SLA），畫面會標出件數。
+
+設定一次即可（約十分鐘）：
+
+1. 到 [supabase.com](https://supabase.com) 建立專案（免費方案即可），記下資料庫密碼。
+2. 左側 **SQL Editor** → New query → 貼上 `supabase/schema.sql` 的全部內容 → Run。這會建立 `imports`（匯入紀錄）與 `case_snapshots`（案件快照）兩張表、列級安全規則，以及 `upsert_cases`、`get_cases` 兩個函式。
+3. **Authentication → Sign In / Providers → Email**：關閉「Allow new users to sign up」；再到 **Authentication → Users → Add user** 建立同事的 email 與密碼（也可以之後再加）。
+4. **Project Settings → API**：複製 Project URL 與 anon public key，填進 `config.js` 的 `supabaseUrl`、`supabaseKey`，推上 GitHub（Pages／Vercel 會自動重新部署）。anon key 本來就是公開的，資料靠列級安全規則保護：沒登入的人什麼都讀不到。
+
+之後的流程：資料來源頁登入 → 照常載入檔案 → 按「把這份檔案存入資料庫」（兩萬件約一分鐘，分批上傳，進度在步驟面板）→ 下次直接「從資料庫載入」並選分析期間。「匯入紀錄」列出每次匯入的資料日期、案件數、未結案與缺料件數，旁邊的圖是歷次匯入的未結案件數；同一個資料日期再存一次會先問要不要覆蓋；刪除某一次匯入只會刪掉那次的案件版本，更早匯入的版本不受影響。
+
+容量：每次匯入約兩萬列、幾十 MB；免費方案的 500 MB 大約可放一年多的月匯入，不夠時升級方案或刪掉最舊的匯入。
 
 ## 資料規則
 

@@ -26,7 +26,8 @@ import i18n
 from i18n import T, L, is_en, tr_df, define, bullet, list_sep
 import rma_engine as E
 
-STATE = {"rep": None, "data": None, "po": None, "charts": {}, "chart_dir": None, "tables": {}}
+STATE = {"rep": None, "data": None, "po": None, "charts": {}, "chart_dir": None, "tables": {},
+         "df": None, "ref_date": None, "inferred": 0, "source": "file", "period": None}
 UNITS = ["各國規劃人員", "供應商", "總部服務團隊", "倉庫／物流", "維修據點", "其他"]
 STATUSES = ["進行中", "待回覆", "已完成", "取消"]
 PO_COLS = ["訂單號", "料號", "供應商", "數量", "下單日", "承諾交期", "實際到貨日", "目的國"]
@@ -57,6 +58,58 @@ WEB_EN = {
         "1. Pick the AIO export file (.xlsx, sheet AllInOneData)\n2. Click \"Load & Analyze\" (about a minute the first time; everything runs in your browser and the file is never uploaded)\n3. Browse the tabs, or download Excel/PowerPoint from \"Reports & Analysis\"",
     "各狀態在途件數": "Open cases by status group",
     "各國案件分布": "Cases by country",
+    # 分析期間
+    "分析期間": "Period",
+    "起日": "Start date",
+    "上個月 1 日至今": "Since the 1st of last month",
+    "本季": "This quarter",
+    "最近 3 個月": "Last 3 months",
+    "最近 6 個月": "Last 6 months",
+    "最近 12 個月": "Last 12 months",
+    "全部": "All",
+    "自訂起日": "Custom start date",
+    "分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請把每次匯入存進資料庫，再「從資料庫載入」。":
+        "The period counts back from the data date (the last case creation date in the export). The default is the 1st of last month to date: data through Sep 21 covers Aug 1 – Sep 21. "
+        "A single export only holds about the last month of cases; to analyze longer periods, save each import to the database and use \"Load from database\".",
+    # 資料庫（Supabase）
+    "資料庫": "Database",
+    "登入": "Sign in",
+    "登出": "Sign out",
+    "從資料庫載入": "Load from database",
+    "把這份檔案存入資料庫": "Save this file to the database",
+    "匯入紀錄": "Import history",
+    "尚未設定資料庫：照 README 的「資料庫（Supabase）」一節建立專案，再把網址與金鑰填進 config.js。": "No database configured: follow the \"Database (Supabase)\" section in the README, then put the URL and key in config.js.",
+    "請登入資料庫（帳號由管理員建立）": "Sign in to the database (accounts are created by the administrator)",
+    "已登入：": "Signed in: ",
+    "登入中…": "Signing in…",
+    "請輸入 email 與密碼": "Enter your email and password",
+    "帳號或密碼不對": "Wrong email or password",
+    "請先登入資料庫": "Sign in to the database first",
+    "登入已過期，請重新登入": "Your session has expired. Sign in again.",
+    "連不上資料庫（網址不對或沒有網路）": "Can't reach the database (wrong URL or no network)",
+    "讀取匯入紀錄失敗：": "Couldn't read the import history: ",
+    "資料庫裡還沒有匯入任何檔案": "No files have been imported into the database yet",
+    "資料庫已經有 {0} 的匯入（{1}），要覆蓋嗎？": "The database already has an import dated {0} ({1}). Replace it?",
+    "已存入資料庫：{0} 件": "Saved to the database: {0} cases",
+    "存入資料庫失敗：": "Saving to the database failed: ",
+    "存入中…": "Saving…",
+    "存入資料庫": "Save to database",
+    "已存入": "Saved",
+    "建立匯入紀錄": "Create import record",
+    "上傳案件": "Upload cases",
+    "從資料庫讀取": "Read from database",
+    "已下載 {0} 件…": "{0} cases downloaded…",
+    "刪除": "Delete",
+    "已刪除": "Deleted",
+    "要刪除 {0} 的匯入嗎？那次匯入的案件版本會一併刪除（更早匯入的版本不受影響）。": "Delete the import dated {0}? The case versions from that import are deleted too (earlier imports are not affected).",
+    "資料日期": "Data date",
+    "檔名": "File",
+    "匯入者": "Imported by",
+    "匯入時間": "Imported at",
+    "歷次匯入的未結案件數": "Open cases at each import",
+    "每根長條是那次匯入時的未結案件數（整份檔案，不受分析期間影響）。": "Each bar is the number of open cases in that import (whole file, regardless of the analysis period).",
+    "從資料庫載入的資料不需要再存；請載入 AIO 匯出檔後再存。": "Data loaded from the database doesn't need saving again. Load an AIO export file first.",
+    "資料庫（{0} 次匯入）": "Database ({0} imports)",
     "國旗下的數字是分析期間的案件數，顏色越深案件越多；滑鼠停在國旗或國家上，看在途與缺料件數。":
         "The number under each flag is the cases created in the period; darker fill means more cases. Hover over a flag or country for open and waiting-on-parts counts.",
     "區域": "Region",
@@ -387,16 +440,67 @@ def _rep():
 # ----------------------------------------------------------------------------
 # 載入
 # ----------------------------------------------------------------------------
-def load(rows, start=None, progress=print):
-    """rows：SheetJS sheet_to_json(header=1, cellDates=true) 的結果（list of list）。回傳 summary() 的 JSON 字串。"""
+PERIODS = ("上個月 1 日至今", "本季", "最近 3 個月", "最近 6 個月", "最近 12 個月", "全部", "自訂起日")
+
+
+def period_start_for(period, ref_date, custom=None):
+    """分析期間選項 → 起日（None＝全部）。以資料日期往回算：本季＝該季第一天；最近 N 個月＝含本月往前數 N 個月的 1 日。"""
+    rd = pd.Timestamp(ref_date).normalize()
+    if period == "自訂起日":
+        return pd.Timestamp(custom).normalize() if custom else E.default_period_start(rd)
+    if period == "全部":
+        return None
+    if period == "本季":
+        return pd.Timestamp(year=rd.year, month=(rd.month - 1) // 3 * 3 + 1, day=1)
+    months = {"最近 3 個月": 3, "最近 6 個月": 6, "最近 12 個月": 12}.get(period)
+    if months:
+        return (rd.replace(day=1) - pd.DateOffset(months=months - 1)).normalize()
+    return E.default_period_start(rd)
+
+
+def period_from(period=None, custom=None, ref_date=None):
+    """給畫面算「從資料庫載入」要抓哪一天以後的案件：{"from": "YYYY-MM-DD" 或 None（全部）}。"""
+    rd = pd.Timestamp(ref_date) if ref_date else (STATE["ref_date"] if STATE["ref_date"] is not None else pd.Timestamp.today())
+    ps = period_start_for(period or PERIODS[0], rd, custom)
+    return {"from": None if ps is None else f"{ps:%Y-%m-%d}", "ref_date": f"{pd.Timestamp(rd):%Y-%m-%d}"}
+
+
+def _merge_snapshots(df, ref_date=None):
+    """資料庫載入的資料每列附有 _data_date（這個版本來自哪一天的匯出）。
+    每次匯出都含全部未結案件，所以「當時未結案、卻沒出現在最新匯出」的案件，是在兩次匯出之間結案了：
+    視為已結案，但結案日不明、不算 SLA。回傳 (df, 推定結案件數)。"""
+    if "_data_date" not in df.columns:
+        return df, 0
+    dd = pd.to_datetime(df["_data_date"], errors="coerce")
+    latest = pd.Timestamp(ref_date).normalize() if ref_date else dd.max()
+    stale = (dd < latest) & ~df["Status"].isin(["Closed", "Rejected"])
+    df = df.drop(columns="_data_date").copy()
+    df["推定結案"] = stale
+    if stale.any():
+        df.loc[stale, "Status"] = "Closed"
+        if "TATInNetworkDays" in df.columns:
+            df.loc[stale, "TATInNetworkDays"] = np.nan
+    return df, int(stale.sum())
+
+
+def load(rows, start=None, progress=print, period=None, ref_date=None):
+    """rows：SheetJS sheet_to_json(header=1, cellDates=true) 的結果（list of list），或從資料庫組回來的同樣格式（多一欄 _data_date）。
+    period：分析期間選項（PERIODS）；start：自訂起日；ref_date：資料日期（資料庫載入時＝最新一次匯入的資料日期）。回傳 summary() 的 JSON 字串。"""
     rows = list(rows)
+    period = period or PERIODS[0]
     # progress(訊息, 階段, i, n)：階段給畫面的步驟動畫用（clean / analyze / parts）
     progress(L(f"整理 {len(rows):,} 列資料…", f"Preparing {len(rows):,} rows…"), "clean")
     raw = pd.DataFrame(rows)
     df = E.clean_raw(raw)
     progress(L(f"  共 {len(df):,} 列，欄位 {df.shape[1]} 個", f"  {len(df):,} rows, {df.shape[1]} columns"), "clean")
+    from_db = "_data_date" in df.columns
+    df, inferred = _merge_snapshots(df, ref_date)
+    if inferred:
+        progress(L(f"  {inferred:,} 件未出現在最新匯出，視為已結案", f"  {inferred:,} cases absent from the newest export; treated as closed"), "clean")
+    rd = pd.Timestamp(ref_date).normalize() if ref_date else df["CreateDate"].max().normalize()
+    ps = period_start_for(period, rd, start or None)
     try:
-        data = E.prepare(df, start or None)
+        data = E.prepare(df, ps if ps is not None else df["CreateDate"].min().normalize(), rd)
     except KeyError as ex:   # 匯出檔少了欄位
         raise ValueError(T("缺少欄位：") + str(ex.args[0] if ex.args else ex)) from None
     ps, rd = data.attrs["period_start"], data.attrs["ref_date"]
@@ -405,6 +509,7 @@ def load(rows, start=None, progress=print):
     rep = E.run_all(data, progress=lambda i, n, t: progress(f"  [{i}/{n}] {t}", "analyze", i, n))
     progress(L(f"  零件明細 {len(rep.parts):,} 顆", f"  {len(rep.parts):,} part lines"), "parts")
     STATE["rep"], STATE["data"], STATE["charts"], STATE["tables"] = rep, data, {}, {}
+    STATE.update(df=df, ref_date=rd, inferred=inferred, source="db" if from_db else "file", period=period)
     if STATE["chart_dir"] is None:
         STATE["chart_dir"] = tempfile.mkdtemp()
     return json.dumps(summary(), ensure_ascii=False)
@@ -423,7 +528,10 @@ def summary():
         "caption": L(f"分析期間 {ps:%Y-%m-%d} 起，資料日期 {rd:%Y-%m-%d}；{len(d):,} 件、{d['Location'].nunique()} 個據點、"
                      f"{d['國家'].nunique()} 個國家；零件明細 {len(rep.parts):,} 顆",
                      f"Period from {ps:%Y-%m-%d}, data as of {rd:%Y-%m-%d}; {len(d):,} cases, {d['Location'].nunique()} sites, "
-                     f"{d['國家'].nunique()} countries; {len(rep.parts):,} part lines"),
+                     f"{d['國家'].nunique()} countries; {len(rep.parts):,} part lines")
+                   + (L(f"；{STATE['inferred']:,} 件未出現在最新匯出，視為已結案（結案日不明，不算 SLA）",
+                        f"; {STATE['inferred']:,} cases absent from the newest export are treated as closed (close date unknown, excluded from SLA)")
+                      if STATE["inferred"] else ""),
         "kpis": [kpi("案件數", f"{len(d):,}"),
                  kpi("在途", kv(k12["在途件數"], k12["在途占比"])),
                  kpi("缺料（Awaiting Spares）", kv(k42["缺料件數"], k42["缺料占在途"])),
@@ -437,6 +545,46 @@ def summary():
         "map": map_data(d),
         "analyses": [[a.key, E.title_part(a.title, -1)] for a in rep.analyses.values()],
     }
+
+
+def db_meta():
+    """存入資料庫用的匯入資訊：資料日期、欄位順序、快照指標（以整份檔案算，不受分析期間影響）。"""
+    df = STATE["df"]
+    if df is None:
+        raise RuntimeError(tr("請先載入 AIO 匯出檔"))
+    if STATE["source"] != "file":
+        raise RuntimeError(tr("從資料庫載入的資料不需要再存；請載入 AIO 匯出檔後再存。"))
+    st = df["Status"].astype(str)
+    return {"data_date": f"{STATE['ref_date']:%Y-%m-%d}",
+            "columns": [c for c in df.columns if not str(c).startswith("_") and c != "推定結案"],
+            "kpis": {"cases": int(len(df)), "open": int((~st.isin(["Closed", "Rejected"])).sum()),
+                     "shortage": int(st.eq("Awaiting Spares").sum()), "ready": int(st.eq("Ready To Ship").sum())}}
+
+
+def _case_id(v):
+    if isinstance(v, float) and v == int(v):
+        return str(int(v))
+    return str(v)
+
+
+def db_payload():
+    """存入資料庫用的案件列：[{case_id, create_date, close_date, status, country, row}]。
+    row 是整列原始值（空值略過、日期轉成「YYYY-MM-DD HH:MM:SS」），載入時走同一個 clean_raw。"""
+    meta = db_meta()
+    df = STATE["df"][meta["columns"]].copy()
+    for c in df.columns:
+        if pd.api.types.is_datetime64_any_dtype(df[c]):
+            df[c] = df[c].dt.strftime("%Y-%m-%d %H:%M:%S")
+    df = df.astype(object).where(df.notna(), None)
+    rows = []
+    for rec in df.to_dict("records"):
+        r = {k: v for k, v in rec.items() if v is not None and v != ""}
+        if r.get("CaseID") is None:
+            continue
+        rows.append({"case_id": _case_id(r["CaseID"]), "create_date": r.get("CreateDate"), "close_date": r.get("CloseDate"),
+                     "status": r.get("Status"), "country": r.get("Country"), "row": r})
+    meta["rows"] = rows
+    return meta
 
 
 def map_data(d):
@@ -731,7 +879,8 @@ def dispatch(cmd, args_json, progress=print):
     fns = {"summary": summary, "tab_demand": tab_demand, "tab_stock": tab_stock, "tab_ship": tab_ship,
            "analysis": analysis, "analysis_table": analysis_table, "conclusions": conclusions,
            "po_template": po_template, "po_result": po_result, "set_lang": set_lang, "ui": ui, "glossary": glossary,
-           "chart": chart, "table_xlsx": table_xlsx, "table_data": table_data, "po_template_table": po_template_table}
+           "chart": chart, "table_xlsx": table_xlsx, "table_data": table_data, "po_template_table": po_template_table,
+           "db_meta": db_meta, "db_payload": db_payload, "period_from": period_from}
     if cmd == "export":
         return json.dumps(export(args["kind"], progress), ensure_ascii=False)
     if cmd not in fns:

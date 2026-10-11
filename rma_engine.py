@@ -151,7 +151,8 @@ def prepare(df, period_start=None, ref_date=None):
     d["類型分組"] = np.where(d["Type"].isin(MAIN_TYPES), d["Type"], "Other")
     d["重複維修"] = (d["同序號案件數"] >= 2).astype(int)
     tat = d["TATInNetworkDays"]
-    d["SLA達成"] = np.where(d["Status"].eq("Closed"), (tat <= SLA_DAYS).astype(float), np.nan)
+    # 已結案但沒有 TAT 的案件（例如資料庫合併時推定結案的）不算 SLA
+    d["SLA達成"] = np.where(d["Status"].eq("Closed") & tat.notna(), (tat <= SLA_DAYS).astype(float), np.nan)
     d["TAT區間"] = pd.cut(tat, [-1, 1, 3, 5, 7, 9, 11, 1_000_000],
                         labels=["00-01", "02-03", "04-05", "06-07", "08-09", "10-11", "12+"]).astype(str).replace({"nan": None})
     d["症狀類別"] = d["RCFailureCodes"].map(SYMPTOM_MAP)
@@ -458,7 +459,7 @@ def a13_internal(d):
 
 def a21_tat(d):
     a = Analysis('2-1', T('時效與 SLA｜TAT 分布'), T('已結案 TATInNetworkDays（收件至維修完成，工作天）與各段耗時'))
-    c = d[d['Status'].eq('Closed')]
+    c = d[d['Status'].eq('Closed') & d['TATInNetworkDays'].notna()]   # 沒有 TAT 的已結案（推定結案）不算
     top6 = main_countries(d)
     order = ['00-01', '02-03', '04-05', '06-07', '08-09', '10-11', '12+']
     dist = pd.crosstab(c['TAT區間'], c['國家']).reindex(index=order, columns=top6, fill_value=0)
@@ -540,7 +541,7 @@ def a21_tat(d):
 
 def a22_sla(d):
     a = Analysis('2-2', T('時效與 SLA｜SLA 達成率'), L(f'已結案（Closed）TAT ≤ {SLA_DAYS} 個工作天的比例', f'Share of closed cases with TAT ≤ {SLA_DAYS} business days'))
-    c = d[d['Status'].eq('Closed')]
+    c = d[d['Status'].eq('Closed') & d['TATInNetworkDays'].notna()]   # 沒有 TAT 的已結案（推定結案）不算
     top6 = main_countries(d)
     by_c = c.groupby('國家')['TATInNetworkDays'].agg(
         案件數='size', 達成率=lambda s: (s <= SLA_DAYS).mean(), 未達成件數=lambda s: int((s > SLA_DAYS).sum()),

@@ -152,6 +152,11 @@
   .logwrap summary { cursor:pointer; color:var(--mute); font-size:.82rem; }
   /* 場景動畫（canvas） */
   .sceneBox { margin:10px 0; line-height:0; }
+  /* 資料庫面板 */
+  .btn.sm { font-size:.8rem; padding:3px 9px; }
+  .row.panel.db { align-items:center; }
+  .row.panel.db .dbt { font-weight:700; }
+  .row.panel.db .dbg { display:inline-flex; gap:8px; flex-wrap:wrap; align-items:center; }
   /* 國旗（表格、圖例）與世界地圖 */
   .flag { width:1.25em; height:.94em; vertical-align:-.1em; margin-right:.35em; border-radius:2px; box-shadow:0 0 0 1px rgba(0,0,0,.18); }
   .map { border:2px solid var(--navy); border-radius:8px; background:var(--panel); padding:10px 12px 8px; }
@@ -258,11 +263,34 @@
   <section class="tab active" id="tab-source">
     <div class="row panel">
       <label><span data-t="AIO 匯出檔（.xlsx，工作表 AllInOneData）">AIO 匯出檔（.xlsx，工作表 AllInOneData）</span><input type="file" id="aio" accept=".xlsx,.xlsm" disabled></label>
-      <label><span data-t="分析起日（留空＝資料最後日期的前一個月 1 日）">分析起日（留空＝資料最後日期的前一個月 1 日）</span><input type="text" id="start" placeholder="2026-08-01" size="14"></label>
+      <label><span data-t="分析期間">分析期間</span><select id="period" data-t-opts>
+        <option value="上個月 1 日至今" selected>上個月 1 日至今</option><option value="本季">本季</option><option value="最近 3 個月">最近 3 個月</option>
+        <option value="最近 6 個月">最近 6 個月</option><option value="最近 12 個月">最近 12 個月</option><option value="全部">全部</option><option value="自訂起日">自訂起日</option>
+      </select></label>
+      <label id="start-wrap" style="display:none"><span data-t="起日">起日</span><input type="text" id="start" placeholder="2026-08-01" size="12"></label>
       <button class="btn primary" id="load" disabled data-t="載入並分析">載入並分析</button>
     </div>
     <div class="caption" id="src-hint" data-t="選擇 AIO 匯出檔後按「載入並分析」；分析在你的瀏覽器裡進行，檔案不會上傳。">選擇 AIO 匯出檔後按「載入並分析」；分析在你的瀏覽器裡進行，檔案不會上傳。</div>
-    <div class="caption" data-t="只分析這天以後建立的案件。不填的話，會自動從「上個月 1 日」開始：例如資料最後一天是 9/21，就分析 8/1 到 9/21。">只分析這天以後建立的案件。不填的話，會自動從「上個月 1 日」開始：例如資料最後一天是 9/21，就分析 8/1 到 9/21。</div>
+    <div class="caption" data-t="分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請把每次匯入存進資料庫，再「從資料庫載入」。">分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請把每次匯入存進資料庫，再「從資料庫載入」。</div>
+    <!-- 資料庫（Supabase）：留存每次匯入的檔案，才看得到多期趨勢；程式在 db.js，資料表在 supabase/schema.sql，設定在 config.js -->
+    <div class="row panel db" id="db-panel">
+      <span class="dbt" data-t="資料庫">資料庫</span><span id="db-status" class="small"></span>
+      <span id="db-login-form" class="dbg" style="display:none">
+        <input type="email" id="db-email" placeholder="email" autocomplete="username" size="22">
+        <input type="password" id="db-pass" placeholder="password" autocomplete="current-password" size="14">
+        <button class="btn" id="db-login" data-t="登入">登入</button>
+      </span>
+      <span id="db-actions" class="dbg" style="display:none">
+        <button class="btn primary" id="db-load" data-t="從資料庫載入">從資料庫載入</button>
+        <button class="btn" id="db-save" data-t="把這份檔案存入資料庫" disabled>把這份檔案存入資料庫</button>
+        <button class="btn" id="db-logout" data-t="登出">登出</button>
+      </span>
+    </div>
+    <div class="caption" id="db-note"></div>
+    <div id="db-history" style="display:none">
+      <div class="section" data-t="匯入紀錄">匯入紀錄</div>
+      <div class="two"><div class="tbl" id="db-imports"></div><div class="chart" id="db-chart"></div></div>
+    </div>
     <div class="kpis" id="src-kpis"></div>
     <div class="caption" id="src-caption"></div>
     <div class="caption" id="src-period" style="font-weight:700;color:var(--ink)"></div>
@@ -426,13 +454,15 @@
 </div>
 <div class="toast" id="toast"></div>
 <!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
+<script src="config.js?v=2026-10-11a"></script>
 <script src="config.local.js" onerror="void 0"></script>
 <!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
-<script src="ui_strings.js?v=2026-10-10t"></script>
+<script src="ui_strings.js?v=2026-10-11a"></script>
 <!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
-<script src="scene.js?v=2026-10-10t"></script>
-<script src="countries.js?v=2026-10-10t"></script>
-<script src="world.js?v=2026-10-10t" defer></script>
-<script src="app.js?v=2026-10-10t"></script>
+<script src="scene.js?v=2026-10-11a"></script>
+<script src="countries.js?v=2026-10-11a"></script>
+<script src="world.js?v=2026-10-11a" defer></script>
+<script src="db.js?v=2026-10-11a"></script>
+<script src="app.js?v=2026-10-11a"></script>
 </body>
 </html>

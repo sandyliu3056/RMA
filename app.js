@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-10t";
+  const V = "2026-10-11a";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -131,7 +131,7 @@
     if (lang === LANG) return;
     if (switching) { $("lang-sel").value = LANG; toast(t("切換語言中…")); return; }
     LANG = lang; store.set("rma_lang", lang);
-    loadCachedUI(); applyUI(); renderActions();
+    loadCachedUI(); applyUI(); renderActions(); renderImports(); dbUI();
     if (window.RMAScene) RMAScene.setLang(LANG);
     worker.postMessage({ id: 0, cmd: "ui_lang", args: { lang } });   // worker 自己的進度訊息也換語言
     if (!ready) return;   // 啟動中：先換介面字串；啟動完成時 onReady 會再與 Python 同步
@@ -140,7 +140,7 @@
     if (loaded) toast(t("切換語言中…"), 60000);
     try {
       await syncLang();
-      renderActions();
+      renderActions(); renderImports(); dbUI();
       if (loaded) { renderSummary(await call("summary", {})); resetTabs(); refreshActive(); }
       if (poData) { poData = await call("po_result", {}); renderPo(); }
     } catch (e) { toast(friendly(e), 8000); }
@@ -164,17 +164,18 @@
   const PHASES = {
     boot: { title: "啟動", done: "就緒", steps: [["runtime", "下載瀏覽器版 Python"], ["pandas", "載入 pandas"], ["engine", "載入分析引擎"], ["extras", "圖表與匯出套件（背景）"]] },
     load: { title: "載入並分析", done: "完成", steps: [["read", "讀取 Excel"], ["clean", "整理資料"], ["analyze", "執行分析"], ["parts", "零件明細"]] },
+    save: { title: "存入資料庫", done: "已存入", steps: [["meta", "建立匯入紀錄"], ["rows", "上傳案件"]] },
   };
-  const LOAD_PCT = { read: [0, 10], clean: [10, 25], analyze: [25, 92], parts: [92, 100] };
-  let phase = null, stepState = {}, stepInfo = {}, phaseDone = null;
+  const PCT = { load: { read: [0, 10], clean: [10, 25], analyze: [25, 92], parts: [92, 100] }, save: { meta: [0, 8], rows: [8, 100] } };
+  let phase = null, stepState = {}, stepInfo = {}, stepLabel = {}, phaseDone = null;
   function startPhase(name) {
-    phase = name; phaseDone = null; stepState = {}; stepInfo = {};
+    phase = name; phaseDone = null; stepState = {}; stepInfo = {}; stepLabel = {};
     for (const [id] of PHASES[name].steps) stepState[id] = "wait";
     $("log").textContent = ""; $("steps-msg").textContent = "";
     renderSteps(0);
   }
   function onStep(m) {
-    if (m.phase !== phase) { if (m.phase === "boot" && phase === "load") return; startPhase(m.phase); }
+    if (m.phase !== phase) { if (m.phase === "boot") return; startPhase(m.phase); }   // 背景套件的啟動步驟不要蓋掉載入／存入的面板
     const ids = PHASES[phase].steps.map((s) => s[0]);
     let id = m.id;
     if (id === "current") id = ids.find((x) => stepState[x] === "run") || ids[ids.length - 1];
@@ -183,12 +184,12 @@
     stepState[id] = m.state;
     if (m.i && m.n) stepInfo[id] = `${m.i}/${m.n}`;
     if (m.state === "fail") phaseDone = "fail";
-    else if (phase === "load" && id === "parts" && m.state === "done") { ids.forEach((x) => (stepState[x] = "done")); phaseDone = "done"; }
+    else if (phase !== "boot" && id === ids[ids.length - 1] && m.state === "done") { ids.forEach((x) => (stepState[x] = "done")); phaseDone = "done"; }
     renderSteps(phase === "boot" ? bootPct : loadPct());
   }
   function loadPct() {
     let pct = 0;
-    for (const [id, [a, b]] of Object.entries(LOAD_PCT)) {
+    for (const [id, [a, b]] of Object.entries(PCT[phase] || PCT.load)) {
       if (stepState[id] === "done") pct = b;
       else if (stepState[id] === "run") { const f = stepInfo[id] ? (+stepInfo[id].split("/")[0]) / (+stepInfo[id].split("/")[1]) : 0.3; pct = a + (b - a) * f; break; }
     }
@@ -207,7 +208,7 @@
       const st = stepState[id] || "wait";
       const ico = st === "done" ? "✓" : st === "fail" ? "✕" : "";
       const sub = stepInfo[id] && st !== "done" ? ` <span class="sub">${esc(stepInfo[id])}</span>` : "";
-      return `<li class="${st}"><span class="ico">${ico}</span><span class="lab">${esc(t(label))}${sub}</span></li>`;
+      return `<li class="${st}"><span class="ico">${ico}</span><span class="lab">${esc(t(stepLabel[id] || label))}${sub}</span></li>`;
     }).join("");
   }
   let toastTimer = null;
@@ -234,6 +235,15 @@
     if (/loading-packages|Can't fetch|Couldn't load package|micropip/i.test(m)) return t("圖表與匯出套件下載失敗，請檢查網路後再試一次。");
     const lines = m.trim().split("\n");
     return lines[lines.length - 1].replace(/^[A-Za-z_.]*(Error|Exception):\s*/, "");
+  }
+  function dbFriendly(e) {
+    // 資料庫（Supabase）相關的錯誤
+    const m = (e && e.message) ? e.message : String(e);
+    if (/NOT_LOGGED_IN/.test(m)) return t("請先登入資料庫");
+    if (/SESSION_EXPIRED|JWT expired|invalid JWT|HTTP 401/i.test(m)) return t("登入已過期，請重新登入");
+    if (/Invalid login credentials|invalid_credentials|invalid_grant/i.test(m)) return t("帳號或密碼不對");
+    if (/Failed to fetch|NetworkError|Load failed|net::ERR_/i.test(m)) return t("連不上資料庫（網址不對或沒有網路）");
+    return friendly(e);
   }
   function clampInput(el, def) {
     let v = parseInt(el.value, 10);
@@ -503,19 +513,32 @@
     }
     analyses = s.analyses || [];
   }
+  // 分析期間：下拉選單（值是內部中文字串，Python 端 period_start_for 對應）；「自訂起日」才顯示日期欄
+  function periodArgs() {
+    const period = $("period").value;
+    let start = null;
+    if (period === "自訂起日") {
+      const v = $("start").value.trim();
+      start = v ? normDate(v) : null;
+      if (v && start === null) { toast(t("分析起日格式不對，請輸入像 2026-08-01 這樣的日期，或留空。"), 6000); return null; }
+    }
+    store.set("rma_period", period);
+    return { period, start };
+  }
+  $("period").addEventListener("change", () => { $("start-wrap").style.display = $("period").value === "自訂起日" ? "" : "none"; store.set("rma_period", $("period").value); });
   $("load").addEventListener("click", async () => {
     const f = $("aio").files[0];
     if (!f) { toast(t("請先選擇 AIO 匯出檔")); return; }
-    const start = normDate($("start").value.trim());
-    if (start === null) { toast(t("分析起日格式不對，請輸入像 2026-08-01 這樣的日期，或留空。"), 6000); return; }
+    const pa = periodArgs();
+    if (!pa) return;
     busy($("load"), true, t("分析中…"));
     setT($("status"), "載入中…");
     startPhase("load");
     try {
       const buffer = await f.arrayBuffer();
-      const s = await call("load", { buffer, start }, [buffer]);
-      loaded = true; curFile = f.name;
-      resetTabs(); renderSummary(s); refreshActive();
+      const s = await call("load", { buffer, period: pa.period, start: pa.start }, [buffer]);
+      loaded = true; curFile = f.name; source = "file";
+      resetTabs(); renderSummary(s); refreshActive(); dbUI();
       log(t("完成。"));
     } catch (e) {
       log(t("錯誤：") + e.message); toast(t("載入失敗：") + friendly(e), 8000);
@@ -815,11 +838,137 @@
     downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), t("跨單位協調待辦.csv"));
   });
 
+  // ------------------------------------------------------------ 資料庫（Supabase）：留存每次匯入，才看得到多期趨勢
+  // 程式在 db.js（登入、匯入紀錄、案件快照）；資料表在 supabase/schema.sql；設定在 config.js
+  const DB = window.RMADB || null;
+  let imports = [];
+  let source = "file";   // 目前的資料來自 file（匯出檔）或 db（資料庫）
+  function dbConfigured() { return !!(DB && DB.configured()); }
+  function dbUI() {
+    const user = dbConfigured() ? DB.user() : null;
+    $("db-status").textContent = !dbConfigured() ? "" : user ? t("已登入：") + user : t("請登入資料庫（帳號由管理員建立）");
+    $("db-note").textContent = dbConfigured() ? "" : t("尚未設定資料庫：照 README 的「資料庫（Supabase）」一節建立專案，再把網址與金鑰填進 config.js。");
+    $("db-login-form").style.display = dbConfigured() && !user ? "" : "none";
+    $("db-actions").style.display = user ? "" : "none";
+    $("db-history").style.display = user && imports.length ? "block" : "none";
+    $("db-save").disabled = !(user && loaded && source === "file");
+  }
+  function fmtTs(iso) {
+    if (!iso) return "";
+    try { return new Intl.DateTimeFormat(LANG === "en" ? "en-GB" : "zh-TW", { timeZone: PREFS.tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(iso)); }
+    catch (e) { return String(iso).slice(0, 16).replace("T", " "); }
+  }
+  function renderImports() {
+    const el = $("db-imports");
+    if (!imports.length) { el.innerHTML = ""; $("db-chart").innerHTML = ""; return; }
+    const k = (i, key) => Number((i.kpis && i.kpis[key]) || 0);
+    const heads = ["資料日期", "檔名", "案件數", "在途", "缺料", "匯入者", "匯入時間", ""];
+    let h = "<table><thead><tr>" + heads.map((c, i) => `<th class="${i >= 2 && i <= 4 ? "num" : ""}">${esc(c ? t(c) : "")}</th>`).join("") + "</tr></thead><tbody>";
+    for (const i of imports) {
+      h += `<tr><td>${esc(i.data_date)}</td><td title="${esc(i.file_name || "")}">${esc(i.file_name || "")}</td><td class="num">${(k(i, "cases") || Number(i.row_count || 0)).toLocaleString()}</td>` +
+        `<td class="num">${k(i, "open").toLocaleString()}</td><td class="num">${k(i, "shortage").toLocaleString()}</td><td>${esc(i.imported_by || "")}</td><td>${esc(fmtTs(i.imported_at))}</td>` +
+        `<td><button class="btn sm db-del" data-id="${esc(i.id)}" data-date="${esc(i.data_date)}">${esc(t("刪除"))}</button></td></tr>`;
+    }
+    el.innerHTML = h + "</tbody></table>";
+    const asc = imports.slice().sort((a, b) => String(a.data_date).localeCompare(String(b.data_date)));
+    renderBars($("db-chart"), asc.map((i) => i.data_date), asc.map((i) => k(i, "open")), { title: t("歷次匯入的未結案件數"), ylabel: t("件數"), note: t("每根長條是那次匯入時的未結案件數（整份檔案，不受分析期間影響）。") });
+  }
+  async function refreshImports() {
+    if (!dbConfigured() || !DB.user()) { imports = []; renderImports(); dbUI(); return; }
+    try { imports = (await DB.listImports()) || []; }
+    catch (e) { imports = []; toast(t("讀取匯入紀錄失敗：") + dbFriendly(e), 6000); }
+    renderImports(); dbUI();
+  }
+  async function dbLogin() {
+    const email = $("db-email").value.trim(), pass = $("db-pass").value;
+    if (!email || !pass) { toast(t("請輸入 email 與密碼")); return; }
+    busy($("db-login"), true, t("登入中…"));
+    try { await DB.login(email, pass); $("db-pass").value = ""; dbUI(); await refreshImports(); }
+    catch (e) { toast(dbFriendly(e), 6000); }
+    finally { busy($("db-login"), false); }
+  }
+  async function dbSave() {
+    if (!loaded || source !== "file") { toast(t("從資料庫載入的資料不需要再存；請載入 AIO 匯出檔後再存。"), 6000); return; }
+    busy($("db-save"), true, t("存入中…"));
+    try {
+      const p = await call("db_payload", {});
+      const existing = imports.find((i) => i.data_date === p.data_date);
+      if (existing && !confirm(tf("資料庫已經有 {0} 的匯入（{1}），要覆蓋嗎？", p.data_date, existing.file_name || ""))) return;
+      startPhase("save"); onStep({ phase: "save", id: "meta", state: "run" });
+      if (existing) await DB.deleteImport(existing.id);
+      const imp = await DB.createImport({ data_date: p.data_date, file_name: curFile, row_count: 0, columns: p.columns, kpis: p.kpis, imported_by: DB.user() });
+      onStep({ phase: "save", id: "meta", state: "done" }); onStep({ phase: "save", id: "rows", state: "run", i: 0, n: p.rows.length });
+      await DB.upsertCases(imp.id, p.rows, (i, n) => { onStep({ phase: "save", id: "rows", state: "run", i, n }); log(tf("已存入資料庫：{0} 件", i)); });
+      onStep({ phase: "save", id: "rows", state: "done" });
+      toast(tf("已存入資料庫：{0} 件", p.rows.length));
+      await refreshImports();
+    } catch (e) {
+      log(t("錯誤：") + e.message); toast(t("存入資料庫失敗：") + dbFriendly(e), 8000);
+      phaseDone = "fail"; renderSteps(loadPct());
+    } finally { busy($("db-save"), false); dbUI(); }
+  }
+  async function dbLoad() {
+    if (!ready) { toast(t("瀏覽器版 Python 還在啟動")); return; }
+    const pa = periodArgs();
+    if (!pa) return;
+    busy($("db-load"), true, t("載入中…"));
+    setT($("status"), "載入中…");
+    startPhase("load"); stepLabel.read = "從資料庫讀取"; onStep({ phase: "load", id: "read", state: "run" });
+    try {
+      imports = (await DB.listImports()) || [];
+      renderImports();
+      if (!imports.length) throw new Error(t("資料庫裡還沒有匯入任何檔案"));
+      const refDate = imports.reduce((m, i) => (String(i.data_date) > m ? String(i.data_date) : m), "");
+      const r = await call("period_from", { period: pa.period, custom: pa.start, ref_date: refDate });
+      log(`${t("從資料庫讀取")} ${r.from || "…"} → ${refDate}`);
+      const objs = await DB.fetchCases(r.from, null, (n) => { log(tf("已下載 {0} 件…", n.toLocaleString())); });
+      // 欄位順序：各次匯入的欄位聯集（新的在前，CaseID 永遠第一欄），最後加 _data_date
+      const cols = ["CaseID"];
+      for (const i of imports) for (const c of (Array.isArray(i.columns) ? i.columns : [])) if (c && !cols.includes(c)) cols.push(c);
+      for (const o of objs) for (const c of Object.keys(o)) if (c !== "_data_date" && !cols.includes(c)) cols.push(c);
+      const rows = [cols.concat(["_data_date"])].concat(objs.map((o) => cols.map((c) => (o[c] === undefined ? null : o[c])).concat([o._data_date || null])));
+      onStep({ phase: "load", id: "read", state: "done" });
+      const s = await call("load", { rows, period: pa.period, start: pa.start, ref_date: refDate });
+      loaded = true; source = "db"; curFile = tf("資料庫（{0} 次匯入）", imports.length);
+      resetTabs(); renderSummary(s); refreshActive();
+      log(t("完成。"));
+    } catch (e) {
+      log(t("錯誤：") + e.message); toast(t("載入失敗：") + dbFriendly(e), 8000);
+      setT($("status"), "載入失敗");
+      phaseDone = "fail"; renderSteps(loadPct());
+    } finally { busy($("db-load"), false); dbUI(); }
+  }
+  async function dbInit() {
+    if (!dbConfigured()) { dbUI(); return; }
+    try { await DB.restore(); } catch (e) { /* 沒有登入就算了 */ }
+    dbUI();
+    if (DB.user()) refreshImports();
+  }
+  if (DB) {
+    $("db-login").addEventListener("click", dbLogin);
+    $("db-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") dbLogin(); });
+    $("db-email").addEventListener("keydown", (e) => { if (e.key === "Enter") $("db-pass").focus(); });
+    $("db-logout").addEventListener("click", async () => { try { await DB.logout(); } catch (e) { /* 忽略 */ } imports = []; renderImports(); dbUI(); });
+    $("db-save").addEventListener("click", dbSave);
+    $("db-load").addEventListener("click", dbLoad);
+    $("db-imports").addEventListener("click", async (e) => {
+      const b = e.target.closest(".db-del"); if (!b) return;
+      if (!confirm(tf("要刪除 {0} 的匯入嗎？那次匯入的案件版本會一併刪除（更早匯入的版本不受影響）。", b.dataset.date))) return;
+      try { await DB.deleteImport(b.dataset.id); toast(t("已刪除")); } catch (err) { toast(dbFriendly(err), 6000); }
+      refreshImports();
+    });
+  }
+
   // ------------------------------------------------------------ 啟動
+  if (DB) DB.configure(CFG);
+  const savedPeriod = store.get("rma_period");
+  if (savedPeriod && Array.from($("period").options).some((o) => o.value === savedPeriod)) $("period").value = savedPeriod;
+  $("start-wrap").style.display = $("period").value === "自訂起日" ? "" : "none";
   applyUI();
   applyPrefs();
   renderActions();
   startPhase("boot");
   if (window.RMAScene) RMAScene.init({ lang: LANG, tz: PREFS.tz, sign: "RMA" });
   call("boot", Object.assign({ lang: LANG }, CFG)).catch(bootFailed);
+  dbInit();
 })();
