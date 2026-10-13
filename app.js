@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-11c";
+  const V = "2026-10-13a";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -159,6 +159,7 @@
     el.scrollTop = el.scrollHeight;
     const sm = $("steps-msg");
     sm.textContent = String(msg).trim(); sm.style.animation = "none"; void sm.offsetWidth; sm.style.animation = "";
+    if (dbPhase && $("db-steps-msg")) $("db-steps-msg").textContent = sm.textContent;
   }
   // ------------------------------------------------------------ 步驟進度面板（啟動／載入的動畫）
   const PHASES = {
@@ -195,6 +196,16 @@
     }
     return phaseDone === "done" ? 100 : pct;
   }
+  let dbPhase = false;   // 目前的載入／存入是從「資料庫」分頁發起的：進度也顯示在那一頁
+  function mirrorSteps() {
+    const box = $("db-steps");
+    if (!box) return;
+    if (!dbPhase || !phase || phase === "boot") { box.style.display = "none"; return; }
+    box.style.display = "";
+    $("db-steps-title").textContent = $("steps-title").textContent; $("db-steps-pct").textContent = $("steps-pct").textContent;
+    $("db-steps-bar").style.width = $("steps-bar").style.width; $("db-steps-bar").className = $("steps-bar").className;
+    $("db-steps-list").innerHTML = $("steps-list").innerHTML; $("db-steps-msg").textContent = $("steps-msg").textContent;
+  }
   function renderSteps(pct) {
     if (!phase) return;
     const P = PHASES[phase];
@@ -210,6 +221,7 @@
       const sub = stepInfo[id] && st !== "done" ? ` <span class="sub">${esc(stepInfo[id])}</span>` : "";
       return `<li class="${st}"><span class="ico">${ico}</span><span class="lab">${esc(t(stepLabel[id] || label))}${sub}</span></li>`;
     }).join("");
+    mirrorSteps();
   }
   let toastTimer = null;
   function toast(msg, ms) {
@@ -471,11 +483,15 @@
     const name = activeTab();
     if (loaded && refreshers[name] && !loadedTabs.has(name)) { loadedTabs.add(name); refreshers[name](); }
   }
+  function showTab(name) {
+    const b = document.querySelector(`#tabs button[data-tab="${name}"]`); if (!b) return;
+    document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("active", x === b));
+    document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("active", x.id === "tab-" + name));
+    refreshActive();
+  }
   $("tabs").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-tab]"); if (!b) return;
-    document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("active", x === b));
-    document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("active", x.id === "tab-" + b.dataset.tab));
-    refreshActive();
+    showTab(b.dataset.tab);
   });
   function resetTabs() {
     // 載入新檔或切換語言後，各分頁改成下次打開時重算；先清掉舊畫面
@@ -488,7 +504,9 @@
   }
 
   // ------------------------------------------------------------ 資料來源
+  let curDataDate = "";
   function renderSummary(s) {
+    curDataDate = s.data_date || "";
     $("status").textContent = `${curFile}${sep()}${s.status}`;
     $("status").removeAttribute("data-t");
     renderKpis($("src-kpis"), s.kpis);
@@ -514,23 +532,32 @@
     analyses = s.analyses || [];
   }
   // 分析期間：下拉選單（值是內部中文字串，Python 端 period_start_for 對應）；「自訂起日」才顯示日期欄
-  function periodArgs() {
-    const period = $("period").value;
+  function periodArgs(prefix) {
+    const p = prefix || "";
+    const period = $(p + "period").value;
     let start = null;
     if (period === "自訂起日") {
-      const v = $("start").value.trim();
+      const v = $(p + "start").value.trim();
       start = v ? normDate(v) : null;
       if (v && start === null) { toast(t("分析起日格式不對，請輸入像 2026-08-01 這樣的日期，或留空。"), 6000); return null; }
     }
-    store.set("rma_period", period);
+    store.set("rma_" + p + "period", period);
     return { period, start };
   }
-  $("period").addEventListener("change", () => { $("start-wrap").style.display = $("period").value === "自訂起日" ? "" : "none"; store.set("rma_period", $("period").value); });
+  for (const p of ["", "db-"]) {
+    if (!$(p + "period")) continue;
+    const saved = store.get("rma_" + p + "period");
+    if (saved && Array.from($(p + "period").options).some((o) => o.value === saved)) $(p + "period").value = saved;
+    const sync = () => { $(p + "start-wrap").style.display = $(p + "period").value === "自訂起日" ? "" : "none"; };
+    $(p + "period").addEventListener("change", () => { sync(); store.set("rma_" + p + "period", $(p + "period").value); });
+    sync();
+  }
   $("load").addEventListener("click", async () => {
     const f = $("aio").files[0];
     if (!f) { toast(t("請先選擇 AIO 匯出檔")); return; }
     const pa = periodArgs();
     if (!pa) return;
+    dbPhase = false;
     busy($("load"), true, t("分析中…"));
     setT($("status"), "載入中…");
     startPhase("load");
@@ -849,12 +876,15 @@
   function dbUI() {
     const on = dbConfigured();
     const user = on ? DB.user() : null;
-    // 沒設定資料庫（config.js 留空）的網站：整個面板不出現，設定方法在 README
-    $("db-panel").style.display = on ? "" : "none";
+    // 沒設定資料庫（config.js 留空）的網站：「資料庫」分頁不出現，設定方法在 README
+    $("tab-btn-db").style.display = on ? "" : "none";
     $("db-status").textContent = !on ? "" : user ? t("已登入：") + user : t("請登入資料庫（帳號由管理員建立）");
     $("db-login-form").style.display = on && !user ? "" : "none";
     $("db-actions").style.display = user ? "" : "none";
+    $("db-body").style.display = user ? "block" : "none";
     $("db-history").style.display = user && imports.length ? "block" : "none";
+    $("db-current").textContent = !loaded ? t("尚未載入檔案：先到「資料來源」選擇 AIO 匯出檔並按「載入並分析」，再回來這裡存入。")
+      : source === "file" ? tf("目前載入：{0}（資料日期 {1}）", curFile, curDataDate) : tf("目前是資料庫的資料（{0} 次匯入），不需要再存。", doneImports().length);
     $("db-save").disabled = dbBusy || !(user && loaded && source === "file");
     $("db-load").disabled = dbBusy;
   }
@@ -897,7 +927,7 @@
   async function dbSave() {
     if (!loaded || source !== "file") { toast(t("從資料庫載入的資料不需要再存；請載入 AIO 匯出檔後再存。"), 6000); return; }
     if (dbBusy) return;
-    dbBusy = true; dbUI();
+    dbBusy = true; dbPhase = true; dbUI();
     busy($("db-save"), true, t("存入中…"));
     let imp = null;   // 這次建立的匯入紀錄；沒上傳完就刪掉，免得被當成最新資料
     try {
@@ -928,9 +958,9 @@
   async function dbLoad() {
     if (!ready) { toast(t("瀏覽器版 Python 還在啟動")); return; }
     if (dbBusy) return;
-    const pa = periodArgs();
+    const pa = periodArgs("db-");
     if (!pa) return;
-    dbBusy = true; dbUI();
+    dbBusy = true; dbPhase = true; dbUI();
     busy($("db-load"), true, t("載入中…"));
     setT($("status"), "載入中…");
     startPhase("load"); stepLabel.read = "從資料庫讀取"; onStep({ phase: "load", id: "read", state: "run" });
@@ -954,7 +984,8 @@
       onStep({ phase: "load", id: "read", state: "done" });
       const s = await call("load", { rows, period: pa.period, start: pa.start, ref_date: refDate, coverage: r.coverage });
       loaded = true; source = "db"; curFile = tf("資料庫（{0} 次匯入）", done.length);
-      resetTabs(); renderSummary(s); refreshActive();
+      resetTabs(); renderSummary(s);
+      showTab("source");   // 摘要在資料來源頁
       log(t("完成。"));
     } catch (e) {
       log(t("錯誤：") + e.message); toast(t("載入失敗：") + dbFriendly(e), 8000);
@@ -985,9 +1016,6 @@
 
   // ------------------------------------------------------------ 啟動
   if (DB) DB.configure(CFG);
-  const savedPeriod = store.get("rma_period");
-  if (savedPeriod && Array.from($("period").options).some((o) => o.value === savedPeriod)) $("period").value = savedPeriod;
-  $("start-wrap").style.display = $("period").value === "自訂起日" ? "" : "none";
   applyUI();
   applyPrefs();
   renderActions();

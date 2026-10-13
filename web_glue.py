@@ -68,9 +68,16 @@ WEB_EN = {
     "最近 12 個月": "Last 12 months",
     "全部": "All",
     "自訂起日": "Custom start date",
-    "分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請把每次匯入存進資料庫，再「從資料庫載入」。":
+    "分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請到「資料庫」分頁把每次匯入存起來，再從那裡載入。":
         "The period counts back from the data date (the last case creation date in the export). The default is the 1st of last month to date: data through Sep 21 covers Aug 1 – Sep 21. "
-        "A single export only holds about the last month of cases; to analyze longer periods, save each import to the database and use \"Load from database\".",
+        "A single export only holds about the last month of cases; to analyze longer periods, save each import on the \"Database\" tab and load from there.",
+    "把每次匯入的 AIO 檔存進資料庫，之後就能選更長的期間（本季、最近 6 個月、全部）看趨勢；同一個案件以最新一次匯出為準。":
+        "Save each imported AIO file to the database; afterwards you can pick longer periods (this quarter, last 6 months, all) to see trends. Each case uses its newest export.",
+    "存入這次載入的檔案": "Save the file you loaded",
+    "目前載入：{0}（資料日期 {1}）": "Loaded: {0} (data date {1})",
+    "尚未載入檔案：先到「資料來源」選擇 AIO 匯出檔並按「載入並分析」，再回來這裡存入。": "No file loaded yet: on \"Data Source\", pick the AIO export and click \"Load & Analyze\", then come back here to save it.",
+    "目前是資料庫的資料（{0} 次匯入），不需要再存。": "Currently showing database data ({0} imports); nothing to save.",
+    "載入完成後會自動跳到「資料來源」看摘要；其他分頁也都改用資料庫的資料。": "When loading finishes you are taken to \"Data Source\" for the summary; every other tab then uses the database data too.",
     # 資料庫（Supabase）
     "資料庫": "Database",
     "登入": "Sign in",
@@ -554,6 +561,7 @@ def summary():
     ps, rd = d.attrs["period_start"], d.attrs["ref_date"]
     return {
         "status": L(f"{ps:%m/%d}–{rd:%m/%d}｜{len(d):,} 件", f"{ps:%b %d}–{rd:%b %d} | {len(d):,} cases"),
+        "data_date": f"{rd:%Y-%m-%d}",
         "period": L(f"本次分析：{ps:%Y-%m-%d} ～ {rd:%Y-%m-%d}", f"Analyzing {ps:%b %d, %Y} – {rd:%b %d, %Y}"),
         "caption": L(f"分析期間 {ps:%Y-%m-%d} 起，資料日期 {rd:%Y-%m-%d}；{len(d):,} 件、{d['Location'].nunique()} 個據點、"
                      f"{d['國家'].nunique()} 個國家；零件明細 {len(rep.parts):,} 顆",

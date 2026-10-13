@@ -250,6 +250,7 @@
 
   <nav class="tabs" id="tabs">
     <button data-tab="source" class="active"><span class="ico">📂</span><span data-t="資料來源">資料來源</span></button>
+    <button data-tab="db" id="tab-btn-db" style="display:none"><span class="ico">🗄️</span><span data-t="資料庫">資料庫</span></button>
     <button data-tab="demand"><span class="ico">📈</span><span data-t="需求規劃">需求規劃</span></button>
     <button data-tab="stock"><span class="ico">📦</span><span data-t="庫存與缺料">庫存與缺料</span></button>
     <button data-tab="po"><span class="ico">🧾</span><span data-t="訂單與交期">訂單與交期</span></button>
@@ -271,25 +272,7 @@
       <button class="btn primary" id="load" disabled data-t="載入並分析">載入並分析</button>
     </div>
     <div class="caption" id="src-hint" data-t="選擇 AIO 匯出檔後按「載入並分析」；分析在你的瀏覽器裡進行，不會上傳任何東西。只有按「把這份檔案存入資料庫」才會把案件資料送到你們自己的資料庫。">選擇 AIO 匯出檔後按「載入並分析」；分析在你的瀏覽器裡進行，不會上傳任何東西。只有按「把這份檔案存入資料庫」才會把案件資料送到你們自己的資料庫。</div>
-    <div class="caption" data-t="分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請把每次匯入存進資料庫，再「從資料庫載入」。">分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請把每次匯入存進資料庫，再「從資料庫載入」。</div>
-    <!-- 資料庫（Supabase）：留存每次匯入的檔案，才看得到多期趨勢；程式在 db.js，資料表在 supabase/schema.sql，設定在 config.js -->
-    <div class="row panel db" id="db-panel">
-      <span class="dbt" data-t="資料庫">資料庫</span><span id="db-status" class="small"></span>
-      <span id="db-login-form" class="dbg" style="display:none">
-        <input type="email" id="db-email" placeholder="email" autocomplete="username" size="22">
-        <input type="password" id="db-pass" placeholder="password" autocomplete="current-password" size="14">
-        <button class="btn" id="db-login" data-t="登入">登入</button>
-      </span>
-      <span id="db-actions" class="dbg" style="display:none">
-        <button class="btn primary" id="db-load" data-t="從資料庫載入">從資料庫載入</button>
-        <button class="btn" id="db-save" data-t="把這份檔案存入資料庫" disabled>把這份檔案存入資料庫</button>
-        <button class="btn" id="db-logout" data-t="登出">登出</button>
-      </span>
-    </div>
-    <div id="db-history" style="display:none">
-      <div class="section" data-t="匯入紀錄">匯入紀錄</div>
-      <div class="two"><div class="tbl" id="db-imports"></div><div class="chart" id="db-chart"></div></div>
-    </div>
+    <div class="caption" data-t="分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請到「資料庫」分頁把每次匯入存起來，再從那裡載入。">分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請到「資料庫」分頁把每次匯入存起來，再從那裡載入。</div>
     <div class="kpis" id="src-kpis"></div>
     <div class="caption" id="src-caption"></div>
     <div class="caption" id="src-period" style="font-weight:700;color:var(--ink)"></div>
@@ -319,6 +302,45 @@
           <span class="seg" id="src-map-view"><button class="btn active" data-view="fit" data-t="區域">區域</button><button class="btn" data-view="world" data-t="全世界">全世界</button></span></div>
         <div id="src-map-svg"></div>
         <div class="chips" id="src-map-chips"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 資料庫（Supabase）：留存每次匯入的檔案，才看得到多期趨勢；程式在 db.js，資料表在 supabase/schema.sql，設定在 config.js。
+       config.js 沒填網址與金鑰時，這個分頁的按鈕不會出現。 -->
+  <section class="tab" id="tab-db">
+    <div class="row panel db" id="db-panel">
+      <span class="dbt" data-t="資料庫">資料庫</span><span id="db-status" class="small"></span>
+      <span id="db-login-form" class="dbg" style="display:none">
+        <input type="email" id="db-email" placeholder="email" autocomplete="username" size="22">
+        <input type="password" id="db-pass" placeholder="password" autocomplete="current-password" size="14">
+        <button class="btn" id="db-login" data-t="登入">登入</button>
+      </span>
+      <span id="db-actions" class="dbg" style="display:none"><button class="btn" id="db-logout" data-t="登出">登出</button></span>
+    </div>
+    <div class="caption" data-t="把每次匯入的 AIO 檔存進資料庫，之後就能選更長的期間（本季、最近 6 個月、全部）看趨勢；同一個案件以最新一次匯出為準。">把每次匯入的 AIO 檔存進資料庫，之後就能選更長的期間（本季、最近 6 個月、全部）看趨勢；同一個案件以最新一次匯出為準。</div>
+    <div id="db-body" style="display:none">
+      <div class="section" data-t="存入這次載入的檔案">存入這次載入的檔案</div>
+      <div class="row panel"><span class="small" id="db-current"></span><button class="btn primary" id="db-save" data-t="把這份檔案存入資料庫" disabled>把這份檔案存入資料庫</button></div>
+      <div class="section" data-t="從資料庫載入">從資料庫載入</div>
+      <div class="row panel">
+        <label><span data-t="分析期間">分析期間</span><select id="db-period" data-t-opts>
+        <option value="上個月 1 日至今" selected>上個月 1 日至今</option><option value="本季">本季</option><option value="最近 3 個月">最近 3 個月</option>
+        <option value="最近 6 個月">最近 6 個月</option><option value="最近 12 個月">最近 12 個月</option><option value="全部">全部</option><option value="自訂起日">自訂起日</option>
+        </select></label>
+        <label id="db-start-wrap" style="display:none"><span data-t="起日">起日</span><input type="text" id="db-start" placeholder="2026-08-01" size="12"></label>
+        <button class="btn primary" id="db-load" data-t="從資料庫載入">從資料庫載入</button>
+      </div>
+      <div class="caption" data-t="載入完成後會自動跳到「資料來源」看摘要；其他分頁也都改用資料庫的資料。">載入完成後會自動跳到「資料來源」看摘要；其他分頁也都改用資料庫的資料。</div>
+      <div class="steps-panel" id="db-steps" style="display:none">
+        <div class="steps-head"><span class="steps-title" id="db-steps-title"></span><span class="steps-pct" id="db-steps-pct"></span></div>
+        <div class="pbar"><div class="pbar-fill" id="db-steps-bar"></div></div>
+        <ol class="steps" id="db-steps-list"></ol>
+        <div class="steps-msg" id="db-steps-msg"></div>
+      </div>
+      <div id="db-history" style="display:none">
+        <div class="section" data-t="匯入紀錄">匯入紀錄</div>
+        <div class="two"><div class="tbl" id="db-imports"></div><div class="chart" id="db-chart"></div></div>
       </div>
     </div>
   </section>
@@ -453,15 +475,15 @@
 </div>
 <div class="toast" id="toast"></div>
 <!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
-<script src="config.js?v=2026-10-11c"></script>
+<script src="config.js?v=2026-10-13a"></script>
 <script src="config.local.js" onerror="void 0"></script>
 <!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
-<script src="ui_strings.js?v=2026-10-11c"></script>
+<script src="ui_strings.js?v=2026-10-13a"></script>
 <!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
-<script src="scene.js?v=2026-10-11c"></script>
-<script src="countries.js?v=2026-10-11c"></script>
-<script src="world.js?v=2026-10-11c" defer></script>
-<script src="db.js?v=2026-10-11c"></script>
-<script src="app.js?v=2026-10-11c"></script>
+<script src="scene.js?v=2026-10-13a"></script>
+<script src="countries.js?v=2026-10-13a"></script>
+<script src="world.js?v=2026-10-13a" defer></script>
+<script src="db.js?v=2026-10-13a"></script>
+<script src="app.js?v=2026-10-13a"></script>
 </body>
 </html>
