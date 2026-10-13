@@ -20,7 +20,7 @@
       ]
     },
     {
-      "source": "/earth.jpg",
+      "source": "/earth.png",
       "headers": [
         {
           "key": "Cache-Control",

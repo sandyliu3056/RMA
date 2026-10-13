@@ -9,7 +9,7 @@
 | `i18n.py` | 語言字典與名詞定義。內部欄名一律中文，顯示時才轉成目前語言（中文模式套用白話用詞）。 |
 | `零件規劃平台.py` | 桌面程式（tkinter）。七個分頁對應工作架構的模組，所有數字來自引擎。 |
 | `index.html`、`app.js`、`worker.js`、`web_glue.py`、`ui_strings.js` | 瀏覽器版。用 Pyodide 把同一個引擎搬進瀏覽器執行；`ui_strings.js` 由 `make_ui_strings.py` 從 `i18n.py` 產生。 |
-| `countries.js`、`flags/`、`world.js` | 國旗與世界地圖：`countries.js` 是 AIO 國家寫法 → ISO 代碼與座標的對照表（新國家加在這裡，旗子放到 `flags/<iso2>.svg`，取自 lipis/flag-icons，MIT）；`world.js` 是各國輪廓（Natural Earth 110m，公有領域）；`earth.jpg` 是底圖（NASA Blue Marble 衛星影像，公有領域，沙漠土色、植被綠色）。 |
+| `countries.js`、`flags/`、`world.js` | 國旗與世界地圖：`countries.js` 是 AIO 國家寫法 → ISO 代碼與座標的對照表（新國家加在這裡，旗子放到 `flags/<iso2>.svg`，取自 lipis/flag-icons，MIT）；`world.js` 是各國輪廓（Natural Earth 110m，公有領域）；`earth.png` 是插畫風的地形底圖（沙漠沙色、植被綠色、雪白，海透明），由 `make_earth.py` 從 NASA Blue Marble 衛星影像（公有領域）產生。 |
 | `db.js`、`config.js`、`supabase/schema.sql` | 資料庫（Supabase）：留存每次匯入，才看得到多期趨勢。`config.js` 填專案網址與 anon key；`supabase/schema.sql` 在 Supabase 的 SQL Editor 執行一次（見下面「資料庫（Supabase）」）。 |
 | `web_app.py` | Streamlit 版（需要能跑 Python 的主機），只有中文介面。 |
 

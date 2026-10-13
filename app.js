@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-13d";
+  const V = "2026-10-13e";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -405,9 +405,10 @@
     const tip = (r) => `${r.label}\n${lab.cases || ""} ${r.cases.toLocaleString()}\n${lab.open || ""} ${r.open.toLocaleString()}\n${lab.shortage || ""} ${r.shortage.toLocaleString()}`;
     const byIso = {};
     for (const r of rows) byIso[COUNTRIES[r.name].iso3] = r;
-    // 底圖是衛星影像（earth.jpg，NASA Blue Marble，等距圓柱投影，和 world.js 同一套座標）：沙漠是土色、植被是綠色
+    // 底圖 earth.png：插畫風的地形色塊（沙漠沙色、乾草原橄欖、植被綠、雪白；海透明讓主題的海色透出來），
+    // 由 make_earth.py 從 NASA 衛星影像產生，等距圓柱投影，和 world.js 同一套座標
     let h = `<svg viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" preserveAspectRatio="xMidYMid meet" role="img"><rect x="0" y="0" width="1000" height="500" class="sea"/>` +
-      `<image href="earth.jpg?v=${V}" x="0" y="0" width="1000" height="500" preserveAspectRatio="none"/><g stroke-width="${0.5 * u}">`;
+      `<image href="earth.png?v=${V}" x="0" y="0" width="1000" height="500" preserveAspectRatio="none"/><g stroke-width="${0.5 * u}">`;
     for (const [iso, d] of Object.entries(W.paths)) {
       const r = byIso[iso];
       if (!r) { h += `<path d="${d}"><title>${esc(W.names[iso] || iso)}</title></path>`; continue; }

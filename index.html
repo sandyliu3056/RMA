@@ -176,9 +176,9 @@
   .map-bar .seg .btn.active { background:var(--gold); }
   .map svg { width:100%; height:auto; display:block; border-radius:6px; border:1px solid var(--line); }
   .map .sea { fill:var(--sea); }
-  .map path { fill:rgba(255,255,255,0); stroke:rgba(255,255,255,.55); }
-  .map path.has { stroke:#FFF3C4; filter:drop-shadow(0 0 1px rgba(0,0,0,.9)); }
-  .map path:hover { fill:rgba(255,210,122,.35); }
+  .map path { fill:rgba(255,255,255,0); stroke:rgba(59,42,26,.38); }
+  .map path.has { stroke:var(--navy); }
+  .map path:hover { fill:rgba(255,210,122,.4); }
   .map .pin rect { fill:#fff; stroke:var(--navy); }
   .map line.lead { stroke:var(--navy); stroke-dasharray:3 2; opacity:.7; }
   .map circle.lead { fill:var(--navy); opacity:.7; }
@@ -482,14 +482,14 @@
 </div>
 <div class="toast" id="toast"></div>
 <!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
-<script src="config.js?v=2026-10-13d"></script>
+<script src="config.js?v=2026-10-13e"></script>
 <script src="config.local.js" onerror="void 0"></script>
 <!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
-<script src="ui_strings.js?v=2026-10-13d"></script>
+<script src="ui_strings.js?v=2026-10-13e"></script>
 <!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
-<script src="countries.js?v=2026-10-13d"></script>
-<script src="world.js?v=2026-10-13d"></script>
-<script src="db.js?v=2026-10-13d"></script>
-<script src="app.js?v=2026-10-13d"></script>
+<script src="countries.js?v=2026-10-13e"></script>
+<script src="world.js?v=2026-10-13e"></script>
+<script src="db.js?v=2026-10-13e"></script>
+<script src="app.js?v=2026-10-13e"></script>
 </body>
 </html>
