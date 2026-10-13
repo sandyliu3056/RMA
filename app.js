@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-13e";
+  const V = "2026-10-13f";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -400,7 +400,7 @@
       if (w / h > ASPECT) h = w / ASPECT; else w = h * ASPECT;
       vb = { x: Math.max(0, Math.min(1000 - w, (x0 + x1) / 2 - w / 2)), y: Math.max(WORLD_VB.y, Math.min(WORLD_VB.y + WORLD_VB.h - h, (y0 + y1) / 2 - h / 2)), w, h };
     }
-    const u = vb.w / 900;   // 一個畫面像素約等於幾個地圖單位（旗子、字的大小用）
+    const u = vb.w / (el.clientWidth || 900);   // 一個畫面像素等於幾個地圖單位：旗子與字不論螢幕多寬都是固定像素大小
     const lab = (m && m.labels) || {};
     const tip = (r) => `${r.label}\n${lab.cases || ""} ${r.cases.toLocaleString()}\n${lab.open || ""} ${r.open.toLocaleString()}\n${lab.shortage || ""} ${r.shortage.toLocaleString()}`;
     const byIso = {};
@@ -416,8 +416,8 @@
     }
     h += `</g>`;
     // 旗子＋件數：先放在國家中心；擠在一起的互相推開（算上旗框與數字的高度），推開的用細線指回原來的位置
-    const fw = 26 * u, fh = fw * 0.75, pad = 2 * u;
-    const bw = fw + 2 * pad + 4 * u, bh = fh + 2 * pad + 15 * u;
+    const fw = 26 * u, fh = fw * 0.75, pad = 1.5 * u;   // 旗子固定 26px 寬
+    const bw = fw + 2 * pad + 4 * u, bh = fh + 2 * pad + 13 * u;
     const pins = rows.map((r) => { const [x, y] = project(COUNTRIES[r.name]); return { r, x0: x, y0: y, x, y }; });
     for (let it = 0; it < 80; it++) {
       let moved = false;
@@ -440,7 +440,7 @@
       h += `<g class="pin" transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})"><title>${esc(tip(r))}</title>` +
         `<rect x="${-fw / 2 - pad}" y="${-fh / 2 - pad}" width="${fw + 2 * pad}" height="${fh + 2 * pad}" rx="${2 * u}" stroke-width="${u}"/>` +
         `<image href="flags/${COUNTRIES[r.name].iso2}.svg" x="${-fw / 2}" y="${-fh / 2}" width="${fw}" height="${fh}"/>` +
-        `<text y="${fh / 2 + 12 * u}" font-size="${11 * u}" text-anchor="middle" stroke-width="${3 * u}">${r.cases.toLocaleString()}</text></g>`;
+        `<text y="${fh / 2 + 11 * u}" font-size="${10.5 * u}" text-anchor="middle" stroke-width="${3 * u}">${r.cases.toLocaleString()}</text></g>`;
     }
     el.innerHTML = h + `</svg>`;
   }
