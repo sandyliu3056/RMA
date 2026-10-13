@@ -15,7 +15,8 @@
     try { if (s) localStorage.setItem(SKEY, JSON.stringify(s)); else localStorage.removeItem(SKEY); } catch (e) { /* 無法存也沒關係 */ }
   }
   function configure(cfg) {
-    BASE = String((cfg && cfg.supabaseUrl) || "").trim().replace(/\/+$/, "");
+    // 從 Data API 頁複製來的網址會多 /rest/v1/，去掉只留專案網址
+    BASE = String((cfg && cfg.supabaseUrl) || "").trim().replace(/\/+$/, "").replace(/\/(rest|auth)\/v1$/, "");
     KEY = String((cfg && cfg.supabaseKey) || "").trim();
     sess = configured() ? loadSess() : null;
   }
