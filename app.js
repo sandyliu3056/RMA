@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-13f";
+  const V = "2026-10-13g";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -329,6 +329,7 @@
       (m.note ? `<div class="ch-note">${esc(m.note)}</div>` : "");
   }
   const SEG_COLORS = ["#2E6FBA", "#D9822B", "#2E9E6B", "#8E4FB5", "#C9A227", "#4FB0C6", "#B5544C", "#6B7280", "#7FA650", "#C77DB5", "#5B8FD0", "#E8862B"];
+  const LIGHT = new Set(["#C9B79C", "#F2B134", "#FBE7C6", "#C9A227"]);   // 淺色的色塊上用深色字
   function renderHStack(el, c) {
     // 橫向堆疊：c = {title, unit, note, rows:[{label, total, segs:[{name, value}]}]}；色塊夠寬就標名稱與數量
     if (!c || !c.rows || !c.rows.length) { el.innerHTML = `<div class="caption pad">${esc(t("（沒有資料）"))}</div>`; return; }
@@ -351,16 +352,21 @@
     const max = Math.max(1, ...totals);
     let h = `<div class="ch-title">${esc(c.title || "")}${c.ylabel ? ` <span class="ch-unit">(${esc(c.ylabel)})</span>` : ""}</div>`;
     h += `<div class="hb-legend">${c.series.map((s) => `<span><i style="background:${esc(s.color)}"></i>${flagImg(s.name)}${esc(s.name)}</span>`).join("")}</div>`;
-    h += `<div class="bars">` + c.labels.map((l, i) => {
+    // 長條 240px 高；每個色塊夠高（≥ 16px）就直接寫上數字，不用滑鼠去指
+    const H = 240;
+    h += `<div class="bars tall">` + c.labels.map((l, i) => {
       // 第一個數列在最下面：由上往下排，所以反轉順序
-      const segs = c.series.slice().reverse().map((s) => { const v = s.values[i] || 0; return v ? `<i style="height:${v / max * 150}px;background:${esc(s.color)}" title="${esc(s.name)}：${Math.round(v).toLocaleString()}"></i>` : ""; }).join("");
+      const segs = c.series.slice().reverse().map((s) => {
+        const v = s.values[i] || 0; if (!v) return "";
+        const px = v / max * H, dark = LIGHT.has(String(s.color).toUpperCase());
+        return `<i class="${dark ? "dark" : ""}" style="height:${px}px;background:${esc(s.color)}" title="${esc(s.name)}：${Math.round(v).toLocaleString()}">${px >= 16 ? Math.round(v).toLocaleString() : ""}</i>`;
+      }).join("");
       return `<div class="b"><b>${Math.round(totals[i]).toLocaleString()}</b><div class="segs">${segs}</div><span title="${esc(l)}">${esc(l)}</span></div>`;
     }).join("") + `</div>`;
     if (c.xlabel) h += `<div class="ch-x">${esc(c.xlabel)} →</div>`;
     if (c.note) h += `<div class="ch-note">${esc(c.note)}</div>`;
     el.innerHTML = h;
   }
-  const LIGHT = new Set(["#C9B79C", "#F2B134", "#FBE7C6"]);
   function renderHBars(el, c) {
     // 水平堆疊長條圖（與桌面版出貨分頁相同）：c = {title, labels, series:[{name, values, color}]}
     if (!c || !c.labels || !c.labels.length) { el.innerHTML = `<div class="caption">${esc(t("（沒有資料）"))}</div>`; return; }

@@ -108,8 +108,11 @@
   .ch-note { color:var(--mute); font-size:.82rem; margin-top:6px; border-top:1px dashed var(--line); padding-top:6px; }
   .bars { display:flex; align-items:flex-end; gap:12px; height:200px; padding:6px 4px 0; overflow-x:auto; }
   .bars .b b, .bars .b span { flex:none; }
+  .bars.tall { height:300px; }
   .bars .b .segs { display:flex; flex-direction:column; justify-content:flex-end; width:70%; height:150px; flex:none; gap:0; }
-  .bars .b .segs i { width:100%; border-radius:0; flex:none; }
+  .bars.tall .b .segs { height:240px; width:80%; }
+  .bars .b .segs i { width:100%; border-radius:0; flex:none; display:flex; align-items:center; justify-content:center; overflow:hidden; font-style:normal; font-weight:700; font-size:.76rem; color:#fff; text-shadow:0 0 3px rgba(0,0,0,.55); border-top:1px solid rgba(255,255,255,.35); box-sizing:border-box; }
+  .bars .b .segs i.dark { color:var(--ink); text-shadow:none; }
   .bars .b .segs i:first-child { border-radius:4px 4px 0 0; }
   .bars .b { flex:1; min-width:46px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; font-size:.78rem; color:var(--mute); }
   .bars .b i { display:block; width:70%; background:var(--orange); border-radius:4px 4px 0 0; }
@@ -118,7 +121,7 @@
   /* 水平堆疊長條圖（出貨與到貨） */
   .hbars { border:2px solid var(--navy); border-radius:8px; background:var(--panel); padding:10px 12px; min-height:120px; }
   .hb-title { font-weight:700; color:var(--ink); margin-bottom:2px; }
-  .hb-legend { display:flex; gap:14px; font-size:.8rem; color:var(--mute); margin-bottom:8px; flex-wrap:wrap; }
+  .hb-legend { display:flex; gap:14px; font-size:.86rem; color:var(--ink); margin-bottom:8px; flex-wrap:wrap; }
   .hb-legend i { display:inline-block; width:10px; height:10px; margin-right:5px; border-radius:2px; vertical-align:-1px; }
   .hb-row { display:grid; grid-template-columns:fit-content(45%) 1fr 56px; gap:8px; align-items:center; margin:3px 0; font-size:.8rem; }
   .hb-lab { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right; }
@@ -482,14 +485,14 @@
 </div>
 <div class="toast" id="toast"></div>
 <!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
-<script src="config.js?v=2026-10-13f"></script>
+<script src="config.js?v=2026-10-13g"></script>
 <script src="config.local.js" onerror="void 0"></script>
 <!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
-<script src="ui_strings.js?v=2026-10-13f"></script>
+<script src="ui_strings.js?v=2026-10-13g"></script>
 <!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
-<script src="countries.js?v=2026-10-13f"></script>
-<script src="world.js?v=2026-10-13f"></script>
-<script src="db.js?v=2026-10-13f"></script>
-<script src="app.js?v=2026-10-13f"></script>
+<script src="countries.js?v=2026-10-13g"></script>
+<script src="world.js?v=2026-10-13g"></script>
+<script src="db.js?v=2026-10-13g"></script>
+<script src="app.js?v=2026-10-13g"></script>
 </body>
 </html>
