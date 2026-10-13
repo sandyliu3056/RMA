@@ -61,6 +61,15 @@
   .row label.inline { flex-direction:row; align-items:center; gap:6px; }
   input, select { font-family:inherit; font-size:.95rem; padding:6px 9px; border:1.5px solid #E0B86A; border-radius:6px; background:#fff; color:var(--ink); max-width:100%; }
   input[type=file] { padding:4px; background:var(--panel); }
+  /* 檔案選擇器：原生的太醜，改成「選擇檔案」按鈕＋檔名；可以把檔案拖進來 */
+  .file { position:relative; display:inline-flex; align-items:center; gap:8px; border:1.5px dashed var(--selline); border-radius:8px; padding:3px 10px 3px 3px; background:var(--panel); cursor:pointer; vertical-align:middle; }
+  .file input[type=file] { position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; }
+  .file .fname { color:var(--mute); font-size:.9rem; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .file:hover:not(.off), .file.drag { background:var(--hover); border-color:var(--navy); }
+  .file.has { border-style:solid; border-color:var(--navy); }
+  .file.has .fname { color:var(--ink); font-weight:700; }
+  .file.off { opacity:.55; cursor:not-allowed; }
+  .file:focus-within { outline:2px solid var(--gold); outline-offset:1px; }
   .btn { font-family:inherit; font-size:.92rem; font-weight:700; padding:7px 14px; border-radius:8px; border:2px solid var(--navy); background:var(--panel); color:var(--ink); cursor:pointer; }
   .btn:hover { background:var(--hover); }
   .btn.primary { background:var(--primary); }
@@ -151,7 +160,6 @@
   .logwrap { margin-top:6px; }
   .logwrap summary { cursor:pointer; color:var(--mute); font-size:.82rem; }
   /* 場景動畫（canvas） */
-  .sceneBox { margin:10px 0; line-height:0; }
   /* 資料庫面板 */
   .btn.sm { font-size:.8rem; padding:3px 9px; }
   .row.panel.db { align-items:center; }
@@ -263,7 +271,7 @@
   <!-- 資料來源 -->
   <section class="tab active" id="tab-source">
     <div class="row panel">
-      <label><span data-t="AIO 匯出檔（.xlsx，工作表 AllInOneData）">AIO 匯出檔（.xlsx，工作表 AllInOneData）</span><input type="file" id="aio" accept=".xlsx,.xlsm" disabled></label>
+      <label><span data-t="AIO 匯出檔（.xlsx，工作表 AllInOneData）">AIO 匯出檔（.xlsx，工作表 AllInOneData）</span><span class="file off"><input type="file" id="aio" accept=".xlsx,.xlsm" disabled><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
       <label><span data-t="分析期間">分析期間</span><select id="period" data-t-opts>
         <option value="上個月 1 日至今" selected>上個月 1 日至今</option><option value="本季">本季</option><option value="最近 3 個月">最近 3 個月</option>
         <option value="最近 6 個月">最近 6 個月</option><option value="最近 12 個月">最近 12 個月</option><option value="全部">全部</option><option value="自訂起日">自訂起日</option>
@@ -283,8 +291,16 @@
       <div class="steps-msg" id="steps-msg"></div>
       <details class="logwrap"><summary data-t="詳細記錄">詳細記錄</summary><div class="log" id="log"></div></details>
     </div>
-    <!-- 場景動畫（canvas，程式在 scene.js，取自 UPS Reprice Platform）；點貓狗或工人會有反應 -->
-    <div class="sceneBox" id="sceneBox"><canvas id="scene"></canvas></div>
+    <!-- 世界地圖（各國案件分布）：輪廓在 world.js、座標與國旗對照在 countries.js；還沒載入資料時只畫輪廓 -->
+    <div id="src-map">
+      <div class="section" id="src-map-title" data-t="各國案件分布">各國案件分布</div>
+      <div class="map">
+        <div class="map-bar"><span class="small" id="src-map-note"></span>
+          <span class="seg" id="src-map-view"><button class="btn" data-view="fit" data-t="區域">區域</button><button class="btn active" data-view="world" data-t="全世界">全世界</button></span></div>
+        <div id="src-map-svg"></div>
+        <div class="chips" id="src-map-chips"></div>
+      </div>
+    </div>
     <div id="src-status" style="display:none">
       <div class="section" id="src-status-title" data-t="各狀態在途件數">各狀態在途件數</div>
       <div class="two">
@@ -293,15 +309,6 @@
           <div class="row"><button class="btn" id="src-status-more" data-t="顯示原始狀態明細">顯示原始狀態明細</button><span class="small" id="src-status-hint"></span></div>
         </div>
         <div class="chart" id="src-status-chart"></div>
-      </div>
-    </div>
-    <div id="src-map" style="display:none">
-      <div class="section" id="src-map-title" data-t="各國案件分布">各國案件分布</div>
-      <div class="map">
-        <div class="map-bar"><span class="small" id="src-map-note"></span>
-          <span class="seg" id="src-map-view"><button class="btn active" data-view="fit" data-t="區域">區域</button><button class="btn" data-view="world" data-t="全世界">全世界</button></span></div>
-        <div id="src-map-svg"></div>
-        <div class="chips" id="src-map-chips"></div>
       </div>
     </div>
   </section>
@@ -382,7 +389,7 @@
     <div class="caption" data-t="AIO 資料沒有採購訂單，這個模組用匯入的訂單檔計算準交率與逾期清單。">AIO 資料沒有採購訂單，這個模組用匯入的訂單檔計算準交率與逾期清單。</div>
     <div class="row panel">
       <button class="btn" id="po-tmpl" data-t="產生訂單範本">產生訂單範本</button>
-      <label><span data-t="匯入訂單檔（Excel／CSV）">匯入訂單檔（Excel／CSV）</span><input type="file" id="po-file" accept=".xlsx,.xls,.csv"></label>
+      <label><span data-t="匯入訂單檔（Excel／CSV）">匯入訂單檔（Excel／CSV）</span><span class="file"><input type="file" id="po-file" accept=".xlsx,.xls,.csv"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
     </div>
     <div class="kpis" id="po-kpis"></div>
     <div id="po-body" style="display:none">
@@ -451,7 +458,7 @@
     <div class="row">
       <button class="btn" id="c-seed" data-t="由分析結論產生待辦">由分析結論產生待辦</button>
       <button class="btn" id="c-dl" data-t="下載待辦（JSON）">下載待辦（JSON）</button>
-      <label><span data-t="還原待辦（JSON）">還原待辦（JSON）</span><input type="file" id="c-restore" accept=".json"></label>
+      <label><span data-t="還原待辦（JSON）">還原待辦（JSON）</span><span class="file"><input type="file" id="c-restore" accept=".json"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
       <button class="btn" id="c-csv" data-t="匯出待辦 CSV">匯出待辦 CSV</button>
     </div>
     <div class="hint" data-t="逾期未完成的待辦會以紅字顯示">逾期未完成的待辦會以紅字顯示</div>
@@ -475,15 +482,14 @@
 </div>
 <div class="toast" id="toast"></div>
 <!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
-<script src="config.js?v=2026-10-13b"></script>
+<script src="config.js?v=2026-10-13c"></script>
 <script src="config.local.js" onerror="void 0"></script>
 <!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
-<script src="ui_strings.js?v=2026-10-13b"></script>
+<script src="ui_strings.js?v=2026-10-13c"></script>
 <!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
-<script src="scene.js?v=2026-10-13b"></script>
-<script src="countries.js?v=2026-10-13b"></script>
-<script src="world.js?v=2026-10-13b" defer></script>
-<script src="db.js?v=2026-10-13b"></script>
-<script src="app.js?v=2026-10-13b"></script>
+<script src="countries.js?v=2026-10-13c"></script>
+<script src="world.js?v=2026-10-13c"></script>
+<script src="db.js?v=2026-10-13c"></script>
+<script src="app.js?v=2026-10-13c"></script>
 </body>
 </html>

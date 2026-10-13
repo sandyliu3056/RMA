@@ -95,6 +95,8 @@ WEB_EN = {
     "登入已過期，請重新登入": "Your session has expired. Sign in again.",
     "連不上資料庫：網址不對、沒有網路，或免費方案的專案閒置一週後被暫停（到 Supabase 後台按 Restore）。": "Can't reach the database: wrong URL, no network, or a free-plan project paused after a week of inactivity (click Restore in the Supabase dashboard).",
     "未完成": "incomplete",
+    "選擇檔案": "Choose file",
+    "尚未選擇檔案": "No file chosen",
     "分析期間內只有 {0} 件案件，太少了，請選更長的期間。": "Only {0} cases fall in the period, which is too few. Choose a longer period.",
     "分析期間內的資料太少（{0} 件），部分分析算不出來，請選更長的期間。": "Too little data in the period ({0} cases) for some of the analyses. Choose a longer period.",
     "資料庫自 {0} 起累積，分析期間從這天開始。": "The database history starts on {0}, so the period starts there.",

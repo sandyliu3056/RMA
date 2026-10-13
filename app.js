@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-13b";
+  const V = "2026-10-13c";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -116,7 +116,7 @@
     $("boot-pill").classList.add("ready"); $("boot-pill").title = "";
     setT($("boot-text"), "就緒");
     setT($("load"), "載入並分析");
-    $("aio").disabled = false; $("load").disabled = false;
+    $("aio").disabled = false; $("load").disabled = false; syncFile($("aio"));
     showExtras();
   }
   async function syncLang() {
@@ -132,7 +132,6 @@
     if (switching) { $("lang-sel").value = LANG; toast(t("切換語言中…")); return; }
     LANG = lang; store.set("rma_lang", lang);
     loadCachedUI(); applyUI(); renderActions(); renderImports(); dbUI();
-    if (window.RMAScene) RMAScene.setLang(LANG);
     worker.postMessage({ id: 0, cmd: "ui_lang", args: { lang } });   // worker 自己的進度訊息也換語言
     if (!ready) return;   // 啟動中：先換介面字串；啟動完成時 onReady 會再與 Python 同步
     switching = true;
@@ -214,7 +213,6 @@
     const p = phaseDone === "done" ? 100 : Math.max(0, Math.min(100, pct | 0));
     $("steps-pct").textContent = p + "%";
     const bar = $("steps-bar"); bar.style.width = p + "%"; bar.className = "pbar-fill" + (phaseDone === "done" ? " done" : phaseDone === "fail" ? " fail" : running ? " running" : "");
-    if (window.RMAScene) RMAScene.setProgress(p / 100);
     $("steps-list").innerHTML = P.steps.map(([id, label]) => {
       const st = stepState[id] || "wait";
       const ico = st === "done" ? "✓" : st === "fail" ? "✕" : "";
@@ -257,6 +255,27 @@
     if (/Failed to fetch|NetworkError|Load failed|net::ERR_|HTTP 5\d\d/i.test(m)) return t("連不上資料庫：網址不對、沒有網路，或免費方案的專案閒置一週後被暫停（到 Supabase 後台按 Restore）。");
     return friendly(e);
   }
+  // 檔案選擇器（index.html 的 .file）：顯示檔名、停用狀態；整塊可以拖放檔案，AIO 檔連整列都可以
+  function syncFile(input) {
+    const wrap = input.closest(".file"); if (!wrap) return;
+    const name = wrap.querySelector(".fname"); const f = input.files && input.files[0];
+    wrap.classList.toggle("has", !!f); wrap.classList.toggle("off", !!input.disabled);
+    if (f) { name.removeAttribute("data-t"); name.textContent = f.name; name.title = f.name; }
+    else { setT(name, "尚未選擇檔案"); name.title = ""; }
+  }
+  document.querySelectorAll(".file input[type=file]").forEach((input) => {
+    const wrap = input.closest(".file");
+    const zone = input.id === "aio" ? (wrap.closest(".row") || wrap) : wrap;
+    input.addEventListener("change", () => syncFile(input));
+    zone.addEventListener("dragover", (e) => { if (input.disabled) return; e.preventDefault(); wrap.classList.add("drag"); });
+    zone.addEventListener("dragleave", () => wrap.classList.remove("drag"));
+    zone.addEventListener("drop", (e) => {
+      e.preventDefault(); wrap.classList.remove("drag");
+      if (input.disabled || !e.dataTransfer || !e.dataTransfer.files.length) return;
+      input.files = e.dataTransfer.files; input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    syncFile(input);
+  });
   function clampInput(el, def) {
     let v = parseInt(el.value, 10);
     if (isNaN(v)) v = def;
@@ -364,23 +383,27 @@
   const MAP_FILLS = ["#FBE7C6", "#F6CF86", "#F2B134", "#E8862B", "#B5544C"];
   let mapData = null, mapView = "fit";
   const project = (c) => [(c.lon + 180) / 360 * 1000, (90 - c.lat) / 180 * 500];
+  const ASPECT = 2.6;                       // 地圖寬高比（橫幅狀）
+  const WORLD_VB = { x: 0, y: 35, w: 1000, h: 1000 / ASPECT };   // 全世界：去掉極區
   function renderMap(el, m) {
     const W = window.RMA_WORLD;
+    if (!W) { el.innerHTML = ""; return; }
     const rows = (m && m.rows || []).filter((r) => COUNTRIES[r.name]);
-    if (!W || !rows.length) { el.innerHTML = `<div class="caption pad">${esc(t("（沒有資料）"))}</div>`; return; }
-    // 視窗：fit = 剛好框住有資料的國家（留邊，至少 250×125，維持 2:1）；world = 全世界
-    let vb = { x: 0, y: 0, w: 1000, h: 500 };
+    if (!rows.length) mapView = "world";   // 還沒載入資料：只畫輪廓
+    document.querySelectorAll("#src-map-view button").forEach((x) => x.classList.toggle("active", x.dataset.view === mapView));
+    // 視窗：fit = 剛好框住有資料的國家（留邊，維持寬高比）；world = 全世界
+    let vb = Object.assign({}, WORLD_VB);
     if (mapView === "fit") {
       const pts = rows.map((r) => project(COUNTRIES[r.name]));
       const x0 = Math.min(...pts.map((p) => p[0])) - 45, x1 = Math.max(...pts.map((p) => p[0])) + 45;
       const y0 = Math.min(...pts.map((p) => p[1])) - 35, y1 = Math.max(...pts.map((p) => p[1])) + 35;
-      let w = Math.max(250, x1 - x0), h = Math.max(125, y1 - y0);
-      if (w / h > 2) h = w / 2; else w = h * 2;
-      vb = { x: Math.max(0, Math.min(1000 - w, (x0 + x1) / 2 - w / 2)), y: Math.max(0, Math.min(500 - h, (y0 + y1) / 2 - h / 2)), w, h };
+      let w = Math.max(260, x1 - x0), h = Math.max(100, y1 - y0);
+      if (w / h > ASPECT) h = w / ASPECT; else w = h * ASPECT;
+      vb = { x: Math.max(0, Math.min(1000 - w, (x0 + x1) / 2 - w / 2)), y: Math.max(WORLD_VB.y, Math.min(WORLD_VB.y + WORLD_VB.h - h, (y0 + y1) / 2 - h / 2)), w, h };
     }
     const u = vb.w / 900;   // 一個畫面像素約等於幾個地圖單位（旗子、字的大小用）
     const max = Math.max(1, ...rows.map((r) => r.cases));
-    const lab = m.labels || {};
+    const lab = (m && m.labels) || {};
     const tip = (r) => `${r.label}\n${lab.cases || ""} ${r.cases.toLocaleString()}\n${lab.open || ""} ${r.open.toLocaleString()}\n${lab.shortage || ""} ${r.shortage.toLocaleString()}`;
     const byIso = {};
     for (const r of rows) byIso[COUNTRIES[r.name].iso3] = r;
@@ -464,7 +487,6 @@
     const tzo = $("tz-sel").selectedOptions[0];
     $("tzname").textContent = tzo ? tzo.textContent : "";
     tick();
-    if (window.RMAScene) { RMAScene.setTz(PREFS.tz); RMAScene.resize(); }
   }
   for (const k of Object.keys(PREFS)) $(k + "-sel").addEventListener("change", (e) => { PREFS[k] = e.target.value; store.set("rma_" + k, PREFS[k]); applyPrefs(); });
   function tick() {
@@ -523,12 +545,9 @@
                                         rows: gi.map((r) => [full.rows[r][0], full.rows[r][2]]), warn: gi.map(() => false), cls: gi.map(() => ""), total: gi.length });
     renderHStack($("src-status-chart"), s.status_chart);
     mapData = s.map || null;
-    $("src-map").style.display = mapData && mapData.rows.length ? "block" : "none";
-    if (mapData) {
-      $("src-map-title").textContent = mapData.title; $("src-map-title").removeAttribute("data-t");
-      $("src-map-note").textContent = mapData.note || "";
-      renderMap($("src-map-svg"), mapData); renderMapChips($("src-map-chips"), mapData);
-    }
+    mapView = "fit";
+    if (mapData) { $("src-map-title").textContent = mapData.title; $("src-map-title").removeAttribute("data-t"); $("src-map-note").textContent = mapData.note || ""; }
+    renderMap($("src-map-svg"), mapData); renderMapChips($("src-map-chips"), mapData);
     analyses = s.analyses || [];
   }
   // 分析期間：下拉選單（值是內部中文字串，Python 端 period_start_for 對應）；「自訂起日」才顯示日期欄
@@ -635,7 +654,7 @@
       poData = await call("po", { buffer }, [buffer]);
       renderPo(); $("toast").style.display = "none";
     } catch (e) { toast(t("匯入失敗：") + friendly(e), 8000); }
-    finally { $("po-file").value = ""; }
+    finally { $("po-file").value = ""; syncFile($("po-file")); }
   });
   $("po-late-dl").addEventListener("click", (e) => poData && exportTable(e.currentTarget, poData.late_x));
 
@@ -852,7 +871,7 @@
       if (!Array.isArray(arr)) throw new Error(t("格式不對"));
       actions = sanitizeActions(arr); saveActions(); toast(tf("已還原 {0} 筆", actions.length));
     } catch (e) { toast(t("讀取失敗：") + friendly(e)); }
-    $("c-restore").value = "";
+    $("c-restore").value = ""; syncFile($("c-restore"));
   });
   $("c-csv").addEventListener("click", () => {
     if (!actions.length) { toast(t("目前沒有待辦")); return; }
@@ -1020,7 +1039,7 @@
   applyPrefs();
   renderActions();
   startPhase("boot");
-  if (window.RMAScene) RMAScene.init({ lang: LANG, tz: PREFS.tz, sign: "RMA" });
+  renderMap($("src-map-svg"), null);   // 還沒載入資料：先畫空的世界地圖
   call("boot", Object.assign({ lang: LANG }, CFG)).catch(bootFailed);
   dbInit();
 })();
