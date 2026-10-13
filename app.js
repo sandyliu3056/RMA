@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   // 版本字串：改了 app.js／worker.js／*.py 就一併改這裡與 index.html 的 app.js?v=，避免瀏覽器用舊快取
-  const V = "2026-10-13c";
+  const V = "2026-10-13d";
   const DEFAULTS = {
     pyodideBase: "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/",
     xlsxUrl: "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js",
@@ -380,7 +380,6 @@
   }
   // ------------------------------------------------------------ 世界地圖（各國案件分布）
   // world.js：各國輪廓（等距圓柱投影到 1000×500）；countries.js：名稱 → ISO 代碼與中心座標
-  const MAP_FILLS = ["#FBE7C6", "#F6CF86", "#F2B134", "#E8862B", "#B5544C"];
   let mapData = null, mapView = "fit";
   const project = (c) => [(c.lon + 180) / 360 * 1000, (90 - c.lat) / 180 * 500];
   const ASPECT = 2.6;                       // 地圖寬高比（橫幅狀）
@@ -402,17 +401,17 @@
       vb = { x: Math.max(0, Math.min(1000 - w, (x0 + x1) / 2 - w / 2)), y: Math.max(WORLD_VB.y, Math.min(WORLD_VB.y + WORLD_VB.h - h, (y0 + y1) / 2 - h / 2)), w, h };
     }
     const u = vb.w / 900;   // 一個畫面像素約等於幾個地圖單位（旗子、字的大小用）
-    const max = Math.max(1, ...rows.map((r) => r.cases));
     const lab = (m && m.labels) || {};
     const tip = (r) => `${r.label}\n${lab.cases || ""} ${r.cases.toLocaleString()}\n${lab.open || ""} ${r.open.toLocaleString()}\n${lab.shortage || ""} ${r.shortage.toLocaleString()}`;
     const byIso = {};
     for (const r of rows) byIso[COUNTRIES[r.name].iso3] = r;
-    let h = `<svg viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" preserveAspectRatio="xMidYMid meet" role="img"><rect x="0" y="0" width="1000" height="500" class="sea"/><g stroke-width="${0.6 * u}">`;
+    // 底圖是衛星影像（earth.jpg，NASA Blue Marble，等距圓柱投影，和 world.js 同一套座標）：沙漠是土色、植被是綠色
+    let h = `<svg viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" preserveAspectRatio="xMidYMid meet" role="img"><rect x="0" y="0" width="1000" height="500" class="sea"/>` +
+      `<image href="earth.jpg?v=${V}" x="0" y="0" width="1000" height="500" preserveAspectRatio="none"/><g stroke-width="${0.5 * u}">`;
     for (const [iso, d] of Object.entries(W.paths)) {
       const r = byIso[iso];
       if (!r) { h += `<path d="${d}"><title>${esc(W.names[iso] || iso)}</title></path>`; continue; }
-      const lvl = Math.min(4, Math.round(Math.sqrt(r.cases / max) * 4));
-      h += `<path d="${d}" class="has" style="fill:${MAP_FILLS[lvl]}"><title>${esc(tip(r))}</title></path>`;
+      h += `<path d="${d}" class="has" stroke-width="${1.4 * u}"><title>${esc(tip(r))}</title></path>`;
     }
     h += `</g>`;
     // 旗子＋件數：先放在國家中心；擠在一起的互相推開（算上旗框與數字的高度），推開的用細線指回原來的位置

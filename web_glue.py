@@ -125,8 +125,8 @@ WEB_EN = {
     "每根長條是那次匯入時的未結案件數（整份檔案，不受分析期間影響）。": "Each bar is the number of open cases in that import (whole file, regardless of the analysis period).",
     "從資料庫載入的資料不需要再存；請載入 AIO 匯出檔後再存。": "Data loaded from the database doesn't need saving again. Load an AIO export file first.",
     "資料庫（{0} 次匯入）": "Database ({0} imports)",
-    "國旗下的數字是分析期間的案件數，顏色越深案件越多；滑鼠停在國旗或國家上，看在途與缺料件數。":
-        "The number under each flag is the cases created in the period; darker fill means more cases. Hover over a flag or country for open and waiting-on-parts counts.",
+    "國旗下的數字是分析期間的案件數；有案件的國家用亮色邊框標出。滑鼠停在國旗或國家上，看在途與缺料件數。":
+        "The number under each flag is the cases created in the period; countries with cases have a bright outline. Hover over a flag or country for open and waiting-on-parts counts.",
     "區域": "Region",
     "全世界": "World",
     "載入失敗：": "Load failed: ",
@@ -639,7 +639,7 @@ def map_data(d):
             for k, r in g.iterrows()]
     return {"title": tr("各國案件分布"), "rows": rows,
             "labels": {"cases": T("案件數"), "open": T("在途"), "shortage": T("缺料")},
-            "note": tr("國旗下的數字是分析期間的案件數，顏色越深案件越多；滑鼠停在國旗或國家上，看在途與缺料件數。")}
+            "note": tr("國旗下的數字是分析期間的案件數；有案件的國家用亮色邊框標出。滑鼠停在國旗或國家上，看在途與缺料件數。")}
 
 
 def status_chart(d):
