@@ -903,15 +903,26 @@
     const user = on ? DB.user() : null;
     // 沒設定資料庫（config.js 留空）的網站：「資料庫」分頁不出現，設定方法在 README
     $("tab-btn-db").style.display = on ? "" : "none";
-    $("db-status").textContent = !on ? "" : user ? t("已登入：") + user : t("請登入資料庫（帳號由管理員建立）");
+    $("db-status").textContent = !on ? "" : user ? t("已登入：") + user : t("請用管理員給你的帳號登入");
     $("db-login-form").style.display = on && !user ? "" : "none";
     $("db-actions").style.display = user ? "" : "none";
     $("db-body").style.display = user ? "block" : "none";
     $("db-history").style.display = user && imports.length ? "block" : "none";
-    $("db-current").textContent = !loaded ? t("尚未載入檔案：先到「資料來源」選擇 AIO 匯出檔並按「載入並分析」，再回來這裡存入。")
-      : source === "file" ? tf("目前載入：{0}（資料日期 {1}）", curFile, curDataDate) : tf("目前是資料庫的資料（{0} 次匯入），不需要再存。", doneImports().length);
+    // 第 1 張卡：目前載入的是什麼、能不能存
+    const cur = $("db-current");
+    cur.textContent = !loaded ? t("還沒載入檔案。先到「資料來源」選擇 AIO 匯出檔並按「載入並分析」，再回來這裡存入。")
+      : source === "file" ? tf("目前載入：{0}（資料日期 {1}）", curFile, curDataDate) : tf("目前看的是資料庫的資料（{0} 次匯入），不需要再存。", doneImports().length);
+    cur.classList.toggle("off", !(loaded && source === "file"));
+    $("db-goto-source").style.display = loaded ? "none" : "";
     $("db-save").disabled = dbBusy || !(user && loaded && source === "file");
-    $("db-load").disabled = dbBusy;
+    // 第 2 張卡：資料庫目前累積到哪
+    const done = doneImports();
+    const dates = done.map((i) => String(i.data_date)).sort();
+    const cov = $("db-coverage");
+    cov.textContent = !done.length ? t("資料庫裡還沒有任何檔案，請先完成第 1 步。")
+      : tf("資料庫已有 {0} 次匯入，資料日期 {1} 到 {2}。", done.length, dates[0], dates[dates.length - 1]);
+    cov.classList.toggle("off", !done.length);
+    $("db-load").disabled = dbBusy || !done.length;
   }
   function fmtTs(iso) {
     if (!iso) return "";
@@ -1029,6 +1040,7 @@
     $("db-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") dbLogin(); });
     $("db-email").addEventListener("keydown", (e) => { if (e.key === "Enter") $("db-pass").focus(); });
     $("db-logout").addEventListener("click", async () => { try { await DB.logout(); } catch (e) { /* 忽略 */ } imports = []; renderImports(); dbUI(); });
+    $("db-goto-source").addEventListener("click", () => { showTab("source"); $("aio").focus(); });
     $("db-save").addEventListener("click", dbSave);
     $("db-load").addEventListener("click", dbLoad);
     $("db-imports").addEventListener("click", async (e) => {

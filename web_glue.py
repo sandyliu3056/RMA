@@ -71,13 +71,20 @@ WEB_EN = {
     "分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請到「資料庫」分頁把每次匯入存起來，再從那裡載入。":
         "The period counts back from the data date (the last case creation date in the export). The default is the 1st of last month to date: data through Sep 21 covers Aug 1 – Sep 21. "
         "A single export only holds about the last month of cases; to analyze longer periods, save each import on the \"Database\" tab and load from there.",
-    "把每次匯入的 AIO 檔存進資料庫，之後就能選更長的期間（本季、最近 6 個月、全部）看趨勢；同一個案件以最新一次匯出為準。":
-        "Save each imported AIO file to the database; afterwards you can pick longer periods (this quarter, last 6 months, all) to see trends. Each case uses its newest export.",
-    "存入這次載入的檔案": "Save the file you loaded",
+    "把每次的 AIO 檔存起來，就能看更長期的趨勢": "Keep every AIO file to see longer-term trends",
+    "一份 AIO 匯出檔只有最近一個多月的案件。每次拿到新檔案都存進資料庫，之後就能選「本季」「最近 6 個月」或「全部」來分析；同一個案件以最新一次匯出為準。":
+        "One AIO export only holds about the last month of cases. Save each new file to the database and you can analyze \"This quarter\", \"Last 6 months\" or \"All\"; each case uses its newest export.",
+    "把這次載入的檔案存進資料庫": "Save the file you loaded",
+    "用資料庫累積的資料來分析": "Analyze the data collected in the database",
+    "去「資料來源」選擇檔案": "Go to \"Data Source\" to pick a file",
+    "每次拿到新的 AIO 匯出檔，載入後都來這裡存一次；只有完整的匯出檔才能存。": "Each time you get a new AIO export, load it and save it here once. Only complete exports can be saved.",
     "目前載入：{0}（資料日期 {1}）": "Loaded: {0} (data date {1})",
-    "尚未載入檔案：先到「資料來源」選擇 AIO 匯出檔並按「載入並分析」，再回來這裡存入。": "No file loaded yet: on \"Data Source\", pick the AIO export and click \"Load & Analyze\", then come back here to save it.",
-    "目前是資料庫的資料（{0} 次匯入），不需要再存。": "Currently showing database data ({0} imports); nothing to save.",
-    "載入完成後會自動跳到「資料來源」看摘要；其他分頁也都改用資料庫的資料。": "When loading finishes you are taken to \"Data Source\" for the summary; every other tab then uses the database data too.",
+    "還沒載入檔案。先到「資料來源」選擇 AIO 匯出檔並按「載入並分析」，再回來這裡存入。": "No file loaded yet. On \"Data Source\", pick the AIO export and click \"Load & Analyze\", then come back here to save it.",
+    "目前看的是資料庫的資料（{0} 次匯入），不需要再存。": "You are viewing database data ({0} imports); nothing to save.",
+    "資料庫裡還沒有任何檔案，請先完成第 1 步。": "The database is empty. Complete step 1 first.",
+    "資料庫已有 {0} 次匯入，資料日期 {1} 到 {2}。": "{0} imports in the database, data dates {1} to {2}.",
+    "載入後會自動跳到「資料來源」看摘要，所有分頁都改用資料庫的資料。": "After loading you are taken to \"Data Source\" for the summary, and every tab uses the database data.",
+    "每一列是存進來的一份檔案；存錯了可以刪除，不會影響更早存的檔案。": "Each row is one saved file. Delete any saved by mistake; earlier files are not affected.",
     # 資料庫（Supabase）
     "資料庫": "Database",
     "登入": "Sign in",
@@ -86,7 +93,7 @@ WEB_EN = {
     "把這份檔案存入資料庫": "Save this file to the database",
     "匯入紀錄": "Import history",
     "尚未設定資料庫：照 README 的「資料庫（Supabase）」一節建立專案，再把網址與金鑰填進 config.js。": "No database configured: follow the \"Database (Supabase)\" section in the README, then put the URL and key in config.js.",
-    "請登入資料庫（帳號由管理員建立）": "Sign in to the database (accounts are created by the administrator)",
+    "請用管理員給你的帳號登入": "Sign in with the account your administrator gave you",
     "已登入：": "Signed in: ",
     "登入中…": "Signing in…",
     "請輸入 email 與密碼": "Enter your email and password",

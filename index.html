@@ -166,8 +166,20 @@
   /* 資料庫面板 */
   .btn.sm { font-size:.8rem; padding:3px 9px; }
   .row.panel.db { align-items:center; }
-  .row.panel.db .dbt { font-weight:700; }
-  .row.panel.db .dbg { display:inline-flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  /* 資料庫分頁：說明＋登入列、兩張步驟卡 */
+  .db-intro { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; border:2px solid var(--navy); border-radius:9px; padding:12px 16px; background:var(--panel); margin:8px 0 12px; }
+  .db-intro-text { flex:1 1 320px; min-width:0; }
+  .db-intro-title { font-weight:700; font-size:1.05rem; margin-bottom:2px; }
+  .db-auth { display:flex; flex-direction:column; align-items:flex-end; gap:6px; max-width:100%; }
+  .db-auth .dbg { display:inline-flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
+  .db-cards { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:0 0 12px; }
+  @media (max-width:900px) { .db-cards { grid-template-columns:1fr; } }
+  .db-card { border:2px solid var(--navy); border-radius:9px; background:var(--panel); display:flex; flex-direction:column; min-width:0; }
+  .db-card-head { display:flex; align-items:center; gap:10px; font-weight:700; font-size:1.02rem; padding:10px 14px; border-bottom:1px solid var(--line); background:var(--stripe); border-radius:7px 7px 0 0; }
+  .db-num { width:26px; height:26px; border-radius:50%; background:var(--navy); color:var(--gold); display:inline-flex; align-items:center; justify-content:center; font-size:.9rem; flex:none; }
+  .db-card-body { padding:12px 14px 14px; display:flex; flex-direction:column; gap:10px; flex:1; }
+  .db-state { font-weight:700; }
+  .db-state.off { color:var(--mute); font-weight:400; }
   /* 國旗（表格、圖例）與世界地圖 */
   .flag { width:1.25em; height:.94em; vertical-align:-.1em; margin-right:.35em; border-radius:2px; box-shadow:0 0 0 1px rgba(0,0,0,.18); }
   .map { border:2px solid var(--navy); border-radius:8px; background:var(--panel); padding:10px 12px 8px; }
@@ -317,31 +329,52 @@
   </section>
 
   <!-- 資料庫（Supabase）：留存每次匯入的檔案，才看得到多期趨勢；程式在 db.js，資料表在 supabase/schema.sql，設定在 config.js。
-       config.js 沒填網址與金鑰時，這個分頁的按鈕不會出現。 -->
+       config.js 沒填網址與金鑰時，這個分頁的按鈕不會出現。版面：說明＋登入 → 兩張步驟卡（存入／載入）→ 進度 → 匯入紀錄 -->
   <section class="tab" id="tab-db">
-    <div class="row panel db" id="db-panel">
-      <span class="dbt" data-t="資料庫">資料庫</span><span id="db-status" class="small"></span>
-      <span id="db-login-form" class="dbg" style="display:none">
-        <input type="email" id="db-email" placeholder="email" autocomplete="username" size="22">
-        <input type="password" id="db-pass" placeholder="password" autocomplete="current-password" size="14">
-        <button class="btn" id="db-login" data-t="登入">登入</button>
-      </span>
-      <span id="db-actions" class="dbg" style="display:none"><button class="btn" id="db-logout" data-t="登出">登出</button></span>
-    </div>
-    <div class="caption" data-t="把每次匯入的 AIO 檔存進資料庫，之後就能選更長的期間（本季、最近 6 個月、全部）看趨勢；同一個案件以最新一次匯出為準。">把每次匯入的 AIO 檔存進資料庫，之後就能選更長的期間（本季、最近 6 個月、全部）看趨勢；同一個案件以最新一次匯出為準。</div>
-    <div id="db-body" style="display:none">
-      <div class="section" data-t="存入這次載入的檔案">存入這次載入的檔案</div>
-      <div class="row panel"><span class="small" id="db-current"></span><button class="btn primary" id="db-save" data-t="把這份檔案存入資料庫" disabled>把這份檔案存入資料庫</button></div>
-      <div class="section" data-t="從資料庫載入">從資料庫載入</div>
-      <div class="row panel">
-        <label><span data-t="分析期間">分析期間</span><select id="db-period" data-t-opts>
-        <option value="上個月 1 日至今" selected>上個月 1 日至今</option><option value="本季">本季</option><option value="最近 3 個月">最近 3 個月</option>
-        <option value="最近 6 個月">最近 6 個月</option><option value="最近 12 個月">最近 12 個月</option><option value="全部">全部</option><option value="自訂起日">自訂起日</option>
-        </select></label>
-        <label id="db-start-wrap" style="display:none"><span data-t="起日">起日</span><input type="text" id="db-start" placeholder="2026-08-01" size="12"></label>
-        <button class="btn primary" id="db-load" data-t="從資料庫載入">從資料庫載入</button>
+    <div class="db-intro" id="db-panel">
+      <div class="db-intro-text">
+        <div class="db-intro-title" data-t="把每次的 AIO 檔存起來，就能看更長期的趨勢">把每次的 AIO 檔存起來，就能看更長期的趨勢</div>
+        <div class="caption" data-t="一份 AIO 匯出檔只有最近一個多月的案件。每次拿到新檔案都存進資料庫，之後就能選「本季」「最近 6 個月」或「全部」來分析；同一個案件以最新一次匯出為準。">一份 AIO 匯出檔只有最近一個多月的案件。每次拿到新檔案都存進資料庫，之後就能選「本季」「最近 6 個月」或「全部」來分析；同一個案件以最新一次匯出為準。</div>
       </div>
-      <div class="caption" data-t="載入完成後會自動跳到「資料來源」看摘要；其他分頁也都改用資料庫的資料。">載入完成後會自動跳到「資料來源」看摘要；其他分頁也都改用資料庫的資料。</div>
+      <div class="db-auth">
+        <span id="db-status" class="small"></span>
+        <span id="db-login-form" class="dbg" style="display:none">
+          <input type="email" id="db-email" placeholder="email" autocomplete="username" size="22">
+          <input type="password" id="db-pass" placeholder="password" autocomplete="current-password" size="14">
+          <button class="btn" id="db-login" data-t="登入">登入</button>
+        </span>
+        <span id="db-actions" class="dbg" style="display:none"><button class="btn sm" id="db-logout" data-t="登出">登出</button></span>
+      </div>
+    </div>
+    <div id="db-body" style="display:none">
+      <div class="db-cards">
+        <div class="db-card">
+          <div class="db-card-head"><span class="db-num">1</span><span data-t="把這次載入的檔案存進資料庫">把這次載入的檔案存進資料庫</span></div>
+          <div class="db-card-body">
+            <div class="db-state" id="db-current"></div>
+            <div class="row" style="margin:0">
+              <button class="btn" id="db-goto-source" data-t="去「資料來源」選擇檔案" style="display:none">去「資料來源」選擇檔案</button>
+              <button class="btn primary" id="db-save" data-t="把這份檔案存入資料庫" disabled>把這份檔案存入資料庫</button>
+            </div>
+            <div class="caption" data-t="每次拿到新的 AIO 匯出檔，載入後都來這裡存一次；只有完整的匯出檔才能存。">每次拿到新的 AIO 匯出檔，載入後都來這裡存一次；只有完整的匯出檔才能存。</div>
+          </div>
+        </div>
+        <div class="db-card">
+          <div class="db-card-head"><span class="db-num">2</span><span data-t="用資料庫累積的資料來分析">用資料庫累積的資料來分析</span></div>
+          <div class="db-card-body">
+            <div class="db-state" id="db-coverage"></div>
+            <div class="row" style="margin:0">
+              <label><span data-t="分析期間">分析期間</span><select id="db-period" data-t-opts>
+              <option value="上個月 1 日至今" selected>上個月 1 日至今</option><option value="本季">本季</option><option value="最近 3 個月">最近 3 個月</option>
+              <option value="最近 6 個月">最近 6 個月</option><option value="最近 12 個月">最近 12 個月</option><option value="全部">全部</option><option value="自訂起日">自訂起日</option>
+              </select></label>
+              <label id="db-start-wrap" style="display:none"><span data-t="起日">起日</span><input type="text" id="db-start" placeholder="2026-08-01" size="12"></label>
+              <button class="btn primary" id="db-load" data-t="從資料庫載入">從資料庫載入</button>
+            </div>
+            <div class="caption" data-t="載入後會自動跳到「資料來源」看摘要，所有分頁都改用資料庫的資料。">載入後會自動跳到「資料來源」看摘要，所有分頁都改用資料庫的資料。</div>
+          </div>
+        </div>
+      </div>
       <div class="steps-panel" id="db-steps" style="display:none">
         <div class="steps-head"><span class="steps-title" id="db-steps-title"></span><span class="steps-pct" id="db-steps-pct"></span></div>
         <div class="pbar"><div class="pbar-fill" id="db-steps-bar"></div></div>
@@ -350,6 +383,7 @@
       </div>
       <div id="db-history" style="display:none">
         <div class="section" data-t="匯入紀錄">匯入紀錄</div>
+        <div class="caption" data-t="每一列是存進來的一份檔案；存錯了可以刪除，不會影響更早存的檔案。">每一列是存進來的一份檔案；存錯了可以刪除，不會影響更早存的檔案。</div>
         <div class="two"><div class="tbl" id="db-imports"></div><div class="chart" id="db-chart"></div></div>
       </div>
     </div>
