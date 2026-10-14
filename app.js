@@ -98,8 +98,8 @@
   function showExtras() {
     // 第二段（圖表與匯出套件）的狀態：就緒前在膠囊顯示提示
     if (!ready) return;
-    if (extrasState === "loading") { $("boot-text").textContent = t("就緒") + " · " + t("圖表套件載入中…"); $("boot-pill").title = ""; }
-    else if (extrasState === "failed") { setT($("boot-text"), "就緒"); $("boot-pill").title = t("圖表套件載入失敗，需要時會再試"); }
+    if (extrasState === "loading") { $("boot-text").textContent = t("就緒") + " · " + t("圖表功能準備中…"); $("boot-pill").title = ""; }
+    else if (extrasState === "failed") { setT($("boot-text"), "就緒"); $("boot-pill").title = t("圖表功能載入失敗，需要時會再試"); }
     else { setT($("boot-text"), "就緒"); $("boot-pill").title = ""; }
   }
   function bootFailed(e) {
@@ -162,7 +162,7 @@
   }
   // ------------------------------------------------------------ 步驟進度面板（啟動／載入的動畫）
   const PHASES = {
-    boot: { title: "啟動", done: "就緒", steps: [["runtime", "下載瀏覽器版 Python"], ["pandas", "載入 pandas"], ["engine", "載入分析引擎"], ["extras", "圖表與匯出套件（背景）"]] },
+    boot: { title: "準備中", done: "就緒", steps: [["runtime", "下載分析工具（第一次比較久）"], ["pandas", "準備資料處理功能"], ["engine", "準備分析功能"], ["extras", "準備圖表與匯出功能（背景進行）"]] },
     load: { title: "載入並分析", done: "完成", steps: [["read", "讀取 Excel"], ["clean", "整理資料"], ["analyze", "執行分析"], ["parts", "零件明細"]] },
     save: { title: "存入資料庫", done: "已存入", steps: [["meta", "建立匯入紀錄"], ["rows", "上傳案件"]] },
   };
@@ -240,9 +240,9 @@
   function friendly(e) {
     // 把 Pyodide／網路錯誤換成看得懂的一句話
     const m = (e && e.message) ? e.message : String(e);
-    if (/Failed to fetch|NetworkError when|importScripts|net::ERR_|Load failed/.test(m)) return t("下載瀏覽器版 Python 失敗，請檢查網路後重新整理頁面。");
+    if (/Failed to fetch|NetworkError when|importScripts|net::ERR_|Load failed/.test(m)) return t("下載分析工具失敗，請檢查網路後重新整理頁面。");
     if (/out of memory|allocation failed|RangeError|Aborted\(/i.test(m)) return t("記憶體不足，請關閉其他分頁後重試。");
-    if (/loading-packages|Can't fetch|Couldn't load package|micropip/i.test(m)) return t("圖表與匯出套件下載失敗，請檢查網路後再試一次。");
+    if (/loading-packages|Can't fetch|Couldn't load package|micropip/i.test(m)) return t("圖表與匯出功能下載失敗，請檢查網路後再試一次。");
     const lines = m.trim().split("\n");
     return lines[lines.length - 1].replace(/^[A-Za-z_.]*(Error|Exception):\s*/, "");
   }
@@ -648,12 +648,12 @@
     $("po-body").style.display = "block";
   }
   $("po-tmpl").addEventListener("click", async () => {
-    if (!ready) { toast(t("瀏覽器版 Python 還在啟動")); return; }
+    if (!ready) { toast(t("系統還在準備中，請稍等一下")); return; }
     try { const r = await call("po_template", {}); downloadB64(r.data, r.name, XLSX_MIME); } catch (e) { toast(friendly(e)); }
   });
   $("po-file").addEventListener("change", async () => {
     const f = $("po-file").files[0]; if (!f) return;
-    if (!ready) { toast(t("瀏覽器版 Python 還在啟動")); $("po-file").value = ""; return; }
+    if (!ready) { toast(t("系統還在準備中，請稍等一下")); $("po-file").value = ""; return; }
     toast(t("匯入中…"), 30000);
     try {
       const buffer = await f.arrayBuffer();
@@ -714,7 +714,7 @@
             ${a.paragraph ? `<div class="h">${esc(a.labels.about)}</div><p>${esc(a.paragraph)}</p>` : ""}
             <p class="concl"><b>${esc(a.labels.takeaway)}</b>${esc(a.conclusion)}</p>
           </div>
-          <div id="r-chart"><div class="boot"><span class="spin"></span>${esc(extrasState === "ready" ? t("畫圖中…") : t("等待套件載入…"))}</div></div>
+          <div id="r-chart"><div class="boot"><span class="spin"></span>${esc(extrasState === "ready" ? t("畫圖中…") : t("等待圖表功能準備好…"))}</div></div>
         </div>
         <div class="row">
           <label class="inline"><span>${esc(t("表格："))}</span><select id="r-table">${opts}</select></label>
@@ -749,8 +749,8 @@
   async function exportKind(btn, kind, mime) {
     if (!needData()) return;
     const waiting = extrasState !== "ready";
-    busy(btn, true, waiting ? t("等待套件載入…") : t("產生中…"));
-    if (waiting) toast(t("圖表與匯出套件還在背景載入，載完會自動開始。"), 6000);
+    busy(btn, true, waiting ? t("等待圖表功能準備好…") : t("產生中…"));
+    if (waiting) toast(t("圖表與匯出功能還在背景準備，好了會自動開始。"), 6000);
     try { const r = await call("export", { kind }); downloadB64(r.data, r.name, mime); }
     catch (e) { toast(t("匯出失敗：") + friendly(e), 8000); } finally { busy(btn, false); }
   }
@@ -763,7 +763,7 @@
     try {
       let g = STATIC_GLOSS[LANG];
       if (!Array.isArray(g) || !g.length) {
-        if (!ready) { toast(t("瀏覽器版 Python 還在啟動")); return; }
+        if (!ready) { toast(t("系統還在準備中，請稍等一下")); return; }
         g = await call("glossary", {});
       }
       $("gloss-body").innerHTML = g.map(([n, d]) => `<dt>${esc(n)}</dt><dd>${esc(d)}</dd>`).join("");
@@ -981,7 +981,7 @@
     } finally { dbBusy = false; busy($("db-save"), false); await refreshImports(); }
   }
   async function dbLoad() {
-    if (!ready) { toast(t("瀏覽器版 Python 還在啟動")); return; }
+    if (!ready) { toast(t("系統還在準備中，請稍等一下")); return; }
     if (dbBusy) return;
     const pa = periodArgs("db-");
     if (!pa) return;
