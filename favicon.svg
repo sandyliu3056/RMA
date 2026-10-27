@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 網站圖示：三塊積木（棕金主題配色）。後畫的積木外圍先描一圈底色，疊上去時就切出接縫 -->
+  <rect width="64" height="64" rx="12" fill="#3B2A1A"/>
+  <!-- 左下：金色（右邊的凸點被上面那塊蓋住，不畫） -->
+  <rect x="6.75" y="29" width="9" height="8" rx="1.5" fill="#F2B134"/>
+  <rect x="8.25" y="30.2" width="4" height="1.6" rx=".8" fill="#FFD27A"/>
+  <rect x="4.5" y="35" width="27" height="20" rx="3" fill="#C98A1E"/>
+  <rect x="4.5" y="35" width="27" height="16" rx="3" fill="#F2B134"/>
+  <rect x="7" y="37.5" width="22" height="2" rx="1" fill="#FFD27A" opacity=".7"/>
+  <!-- 右下：橘色 -->
+  <g fill="#3B2A1A" stroke="#3B2A1A" stroke-width="6" stroke-linejoin="round">
+    <rect x="48.25" y="29" width="9" height="8" rx="1.5"/>
+    <rect x="32.5" y="35" width="27" height="20" rx="3"/>
+  </g>
+  <rect x="48.25" y="29" width="9" height="8" rx="1.5" fill="#E8862B"/>
+  <rect x="49.75" y="30.2" width="4" height="1.6" rx=".8" fill="#F6A85A"/>
+  <rect x="32.5" y="35" width="27" height="20" rx="3" fill="#B9621A"/>
+  <rect x="32.5" y="35" width="27" height="16" rx="3" fill="#E8862B"/>
+  <rect x="35" y="37.5" width="22" height="2" rx="1" fill="#F6A85A" opacity=".7"/>
+  <!-- 上方：米白色，跨在兩塊中間 -->
+  <g fill="#3B2A1A" stroke="#3B2A1A" stroke-width="6" stroke-linejoin="round">
+    <rect x="20.75" y="9" width="9" height="8" rx="1.5"/>
+    <rect x="34.25" y="9" width="9" height="8" rx="1.5"/>
+    <rect x="18.5" y="15" width="27" height="20" rx="3"/>
+  </g>
+  <rect x="20.75" y="9" width="9" height="8" rx="1.5" fill="#FBF6EC"/>
+  <rect x="22.25" y="10.2" width="4" height="1.6" rx=".8" fill="#FFFFFF"/>
+  <rect x="34.25" y="9" width="9" height="8" rx="1.5" fill="#FBF6EC"/>
+  <rect x="35.75" y="10.2" width="4" height="1.6" rx=".8" fill="#FFFFFF"/>
+  <rect x="18.5" y="15" width="27" height="20" rx="3" fill="#D9CBB6"/>
+  <rect x="18.5" y="15" width="27" height="16" rx="3" fill="#FBF6EC"/>
+  <rect x="21" y="17.5" width="22" height="2" rx="1" fill="#FFFFFF" opacity=".7"/>
+</svg>
