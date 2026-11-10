@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="brown" data-font="hand">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>售後零件規劃平台</title>
+<link rel="icon" href="favicon.ico" sizes="32x32">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<!-- 網頁字型不阻擋顯示：載入完成前先用系統字型 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Iansui&family=Comic+Neue:wght@400;700&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Iansui&family=Comic+Neue:wght@400;700&family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"></noscript>
+<style>
+  /* 主題：標題列與表頭用 --navy、重點字用 --gold、分頁列 --tabbar、主要按鈕 --primary */
+  :root, html[data-theme="brown"] { --navy:#3B2A1A; --gold:#F2B134; --tabbar:#F5A623; --tab:#F8BE4A; --bg:#F3ECE0; --card:#FBF6EC; --panel:#FFFDF7; --line:#D9CBB6; --ink:#3B2A1A; --mute:#7A6652; --primary:#F2A93B; --hover:#FFD27A; --stripe:#F6EFE3; --sel:#4A3524; --selline:#A98B5A; --warn:#B5544C; --accent:#3B2A1A; --orange:#E8862B; --sea:#DCE9F2; }
+  html[data-theme="navy"] { --navy:#1F3F6E; --gold:#F5C95C; --tabbar:#2E6FBA; --tab:#6A9BD8; --bg:#EDF1F7; --card:#F8FAFD; --panel:#FFFFFF; --line:#C9D4E4; --ink:#1E2430; --mute:#5B6472; --primary:#F2B134; --hover:#FFD27A; --stripe:#F0F4F9; --sel:#2A4F82; --selline:#8FB0DB; --warn:#B5544C; --accent:#1F3F6E; --orange:#D9822B; --sea:#D6E4F3; }
+  html[data-theme="green"] { --navy:#1F3D2B; --gold:#E9C46A; --tabbar:#2E9E6B; --tab:#63B98E; --bg:#EEF4EF; --card:#F7FBF8; --panel:#FFFFFF; --line:#C6D8CC; --ink:#1E2A22; --mute:#5B6B60; --primary:#E9C46A; --hover:#F6DE9A; --stripe:#EFF6F1; --sel:#2B5239; --selline:#8FC2A4; --warn:#B5544C; --accent:#1F3D2B; --orange:#D9822B; --sea:#D8E8EE; }
+  /* 字型：手寫風（與參考設計相同的風格）、正黑體、等寬 */
+  html[data-font="hand"] body { font-family:"Reprice Sketch","王漢宗標楷體空心","Sketch Block","芫荽","Iansui","LXGW WenKai TC","霞鶩文楷 TC","Segoe Print","Ink Free","Comic Neue","Comic Sans MS","Microsoft JhengHei",sans-serif; }
+  html[data-font="sans"] body { font-family:"Microsoft JhengHei","Segoe UI","Noto Sans TC",sans-serif; }
+  html[data-font="mono"] body { font-family:Consolas,"Cascadia Mono","Noto Sans Mono CJK TC","Microsoft JhengHei",monospace; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--ink); font-size:14px; line-height:1.55; }
+  /* 標題列（全寬、深色） */
+  .hdr { background:var(--navy); color:var(--gold); padding:10px 22px; display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; }
+  .hdr .brand { min-width:0; max-width:100%; }
+  .hdr h1 { margin:0; font-size:1.55rem; letter-spacing:.12em; font-weight:700; text-transform:uppercase; }
+  html[lang="en"] .hdr h1 { letter-spacing:.06em; }   /* 英文標題長，字距縮小 */
+  .hdr .sub { color:#D9C7A8; font-size:.82rem; overflow-wrap:anywhere; }
+  /* 控制區佔標題右邊剩下的寬度、靠右；放不下時在右邊分兩行（下拉選單一行、時鐘與按鈕一行），不整排掉到標題下面留一片空白 */
+  .hdr .ctl { flex:1 1 0; display:flex; align-items:center; justify-content:flex-end; gap:6px 8px; flex-wrap:wrap; }
+  .hdr .prefs { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+  @media (max-width:1000px) { .hdr .ctl { flex-basis:100%; justify-content:flex-start; } .hdr .prefs { justify-content:flex-start; } }
+  .hdr select { background:var(--sel); color:var(--gold); border:1px solid var(--selline); border-radius:6px; padding:3px 6px; font-family:inherit; font-size:.82rem; cursor:pointer; }
+  .hdr .clock { text-align:right; white-space:nowrap; margin:0 8px; }
+  .hdr .clock .t { font-size:1.55rem; font-weight:700; line-height:1; letter-spacing:.05em; }
+  .hdr .clock .d { color:#D9C7A8; font-size:.76rem; }
+  .hdr a { color:#D9C7A8; font-size:.8rem; }
+  /* 啟動狀態膠囊：準備中（金色進度條）→ 就緒（綠點）→ 失敗（紅點） */
+  .pill { display:flex; align-items:center; gap:7px; border:1px solid var(--selline); border-radius:999px; padding:3px 10px; font-size:.8rem; color:#D9C7A8; white-space:nowrap; }
+  .pill .dot { width:8px; height:8px; border-radius:50%; background:var(--gold); animation:blink 1.2s ease-in-out infinite; }
+  .pill .bar { display:block; width:70px; height:6px; border-radius:3px; background:var(--sel); overflow:hidden; }
+  .pill .bar b { display:block; height:100%; width:0; background:var(--gold); transition:width .4s; }
+  .pill.ready .dot { background:#6CC070; animation:none; }
+  .pill.ready .bar { display:none; }
+  .pill.fail .dot { background:#E06C5C; animation:none; }
+  .pill.fail .bar { display:none; }
+  @keyframes blink { 50% { opacity:.3; } }
+  .hbtn { background:transparent; color:var(--gold); border:1px solid var(--selline); border-radius:6px; padding:4px 10px; font-family:inherit; font-size:.85rem; font-weight:700; cursor:pointer; }
+  .hbtn:hover { background:var(--sel); }
+  /* 分頁列（金色長條＋圓角分頁，選中的分頁與下方卡片相連） */
+  .tabs { display:flex; flex-wrap:wrap; gap:4px; background:var(--tabbar); padding:7px 8px 0; }
+  .tabs button { display:flex; align-items:center; gap:6px; background:var(--tab); color:var(--ink); border:2px solid var(--navy); border-radius:9px 9px 0 0; padding:6px 14px 7px; margin-bottom:0; font-weight:700; font-family:inherit; font-size:.95rem; cursor:pointer; position:relative; }
+  .tabs button:hover { background:var(--hover); }
+  .tabs button.active { background:var(--card); border-bottom-color:var(--card); z-index:2; margin-bottom:-2px; }
+  @media (max-width:1350px) { .tabs button { padding:5px 10px 6px; font-size:.88rem; gap:4px; } }
+  @media (max-width:1100px) { .tabs .ico { display:none; } }
+  .tabs .ico { font-size:.95rem; }
+  .card { margin:0 8px 28px; background:var(--card); border:2px solid var(--navy); border-radius:0 12px 12px 12px; padding:14px 18px 20px; box-shadow:0 8px 18px rgba(0,0,0,.14); min-height:420px; }
+  .tab { display:none; }
+  .tab.active { display:block; }
+  /* 元件 */
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin:8px 0 10px; }
+  .row.panel { border:2px solid var(--navy); border-radius:9px; padding:10px 14px; background:var(--panel); align-items:center; }
+  .row label { display:flex; flex-direction:column; gap:3px; font-size:.86rem; color:var(--ink); font-weight:700; max-width:100%; }
+  .row label.inline { flex-direction:row; align-items:center; gap:6px; }
+  input, select { font-family:inherit; font-size:.95rem; padding:6px 9px; border:1.5px solid #E0B86A; border-radius:6px; background:#fff; color:var(--ink); max-width:100%; }
+  input[type=file] { padding:4px; background:var(--panel); }
+  /* 檔案選擇器：原生的太醜，改成「選擇檔案」按鈕＋檔名；可以把檔案拖進來 */
+  .file { position:relative; display:inline-flex; align-items:center; gap:8px; border:1.5px dashed var(--selline); border-radius:8px; padding:3px 10px 3px 3px; background:var(--panel); cursor:pointer; vertical-align:middle; }
+  .file input[type=file] { position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; }
+  .file .fname { color:var(--mute); font-size:.9rem; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .file:hover:not(.off), .file.drag { background:var(--hover); border-color:var(--navy); }
+  .file.has { border-style:solid; border-color:var(--navy); }
+  .file.has .fname { color:var(--ink); font-weight:700; }
+  .file.off { opacity:.55; cursor:not-allowed; }
+  .file:focus-within { outline:2px solid var(--gold); outline-offset:1px; }
+  .btn { font-family:inherit; font-size:.92rem; font-weight:700; padding:7px 14px; border-radius:8px; border:2px solid var(--navy); background:var(--panel); color:var(--ink); cursor:pointer; }
+  .btn:hover { background:var(--hover); }
+  .btn.primary { background:var(--primary); }
+  .btn.primary:hover { background:var(--hover); }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin:10px 0; }
+  .kpi { background:var(--panel); border:2px solid var(--navy); border-radius:9px; padding:8px 14px; }
+  .kpi .k { color:var(--mute); font-size:.8rem; font-weight:700; }
+  .kpi .v { color:var(--ink); font-size:1.45rem; font-weight:700; line-height:1.3; }
+  .info { color:var(--mute); font-size:.85em; cursor:help; }
+  .section { font-weight:700; font-size:1.02rem; margin:16px 0 6px; }
+  .caption { color:var(--mute); font-size:.85rem; }
+  .pad { padding:10px; }
+  .hint { color:var(--mute); font-size:.82rem; margin:-2px 0 6px 2px; }
+  .tbl { overflow:auto; max-height:420px; border:2px solid var(--navy); border-radius:8px; background:var(--panel); }
+  .tbl.tall { max-height:520px; }
+  table { border-collapse:collapse; width:100%; font-size:.88rem; }
+  th { position:sticky; top:0; background:var(--navy); color:var(--gold); text-align:left; padding:7px 10px; font-weight:700; white-space:nowrap; }
+  th .info { color:#F2D9A8; }
+  td { padding:6px 10px; border-bottom:1px solid #EFE6D8; white-space:nowrap; }
+  tr:nth-child(even) td { background:var(--stripe); }
+  tr.warn td { color:var(--warn); font-weight:700; }
+  tr.grp td { font-weight:700; background:var(--stripe) !important; border-top:1px solid var(--line); }
+  tr.sub td { color:var(--mute); }
+  tr.sub td:nth-child(2) { padding-left:24px; color:var(--ink); }
+  tr.warn input, tr.warn select { color:var(--warn); font-weight:700; }
+  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  td.topic input { width:100%; min-width:280px; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .two > *, .report > *, .rbody > * { min-width:0; }
+  @media (max-width:900px) { .two { grid-template-columns:1fr; } }
+  .chart { border:2px solid var(--navy); border-radius:8px; background:var(--panel); padding:10px 12px 8px; }
+  .ch-title { font-weight:700; color:var(--ink); margin-bottom:4px; }
+  .ch-unit { font-weight:400; color:var(--mute); font-size:.85rem; }
+  .ch-x { text-align:right; color:var(--mute); font-size:.78rem; margin-top:2px; }
+  .ch-note { color:var(--mute); font-size:.82rem; margin-top:6px; border-top:1px dashed var(--line); padding-top:6px; }
+  .bars { display:flex; align-items:flex-end; gap:12px; height:200px; padding:6px 4px 0; overflow-x:auto; }
+  .bars .b b, .bars .b span { flex:none; }
+  .bars.tall { height:300px; }
+  .bars .b .segs { display:flex; flex-direction:column; justify-content:flex-end; width:70%; height:150px; flex:none; gap:0; }
+  .bars.tall .b .segs { height:240px; width:80%; }
+  .bars .b .segs i { width:100%; border-radius:0; flex:none; display:flex; align-items:center; justify-content:center; overflow:hidden; font-style:normal; font-weight:700; font-size:.76rem; color:#fff; text-shadow:0 0 3px rgba(0,0,0,.55); border-top:1px solid rgba(255,255,255,.35); box-sizing:border-box; }
+  .bars .b .segs i.dark { color:var(--ink); text-shadow:none; }
+  .bars .b .segs i:first-child { border-radius:4px 4px 0 0; }
+  .bars .b { flex:1; min-width:46px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; font-size:.78rem; color:var(--mute); }
+  .bars .b i { display:block; width:70%; background:var(--orange); border-radius:4px 4px 0 0; }
+  .bars .b b { color:var(--ink); font-size:.82rem; }
+  .bars .b span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  /* 水平堆疊長條圖（出貨與到貨） */
+  .hbars { border:2px solid var(--navy); border-radius:8px; background:var(--panel); padding:10px 12px; min-height:120px; }
+  .hb-title { font-weight:700; color:var(--ink); margin-bottom:2px; }
+  .hb-legend { display:flex; gap:14px; font-size:.86rem; color:var(--ink); margin-bottom:8px; flex-wrap:wrap; }
+  .hb-legend i { display:inline-block; width:10px; height:10px; margin-right:5px; border-radius:2px; vertical-align:-1px; }
+  .hb-row { display:grid; grid-template-columns:fit-content(45%) 1fr 56px; gap:8px; align-items:center; margin:3px 0; font-size:.8rem; }
+  .hb-lab { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right; }
+  .hb-bar { display:flex; height:18px; }
+  .hb-bar i { display:block; height:100%; color:#fff; font-size:.75rem; font-style:normal; line-height:18px; text-align:center; overflow:hidden; white-space:nowrap; }
+  .hb-legend i { font-style:normal; }
+  .hb-bar i.dark { color:var(--navy); }
+  .hb-row b { color:var(--mute); font-weight:400; }
+  .hstack .hs-group { margin:8px 0 12px; }
+  .hstack .hs-head { display:flex; justify-content:space-between; align-items:baseline; font-weight:700; margin-bottom:3px; }
+  .hstack .hs-head b { color:var(--ink); }
+  .hstack .hb-bar { height:26px; border-radius:4px; overflow:hidden; display:flex; }
+  .hstack .hb-bar i { line-height:26px; font-size:.78rem; font-weight:700; padding:0 4px; }
+  .hstack .hs-keys { display:flex; flex-wrap:wrap; gap:2px 14px; margin-top:4px; font-size:.8rem; color:var(--mute); }
+  .hstack .hs-keys i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px; }
+  .hstack .hs-keys b { color:var(--ink); font-weight:700; }
+  .log { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-family:Consolas, monospace; font-size:.8rem; max-height:180px; overflow:auto; white-space:pre-wrap; margin-top:6px; }
+  /* 步驟進度（啟動／載入）動畫 */
+  .steps-panel { background:var(--panel); border:2px solid var(--navy); border-radius:9px; padding:12px 16px; margin:10px 0; }
+  .steps-head { display:flex; justify-content:space-between; align-items:baseline; font-weight:700; }
+  .steps-pct { color:var(--mute); font-variant-numeric:tabular-nums; }
+  .pbar { height:10px; border-radius:5px; background:var(--stripe); overflow:hidden; margin:6px 0 10px; border:1px solid var(--line); }
+  .pbar-fill { height:100%; width:0; border-radius:5px; background:var(--primary); transition:width .5s ease; }
+  .pbar-fill.running { background-image:linear-gradient(45deg, rgba(255,255,255,.35) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.35) 50%, rgba(255,255,255,.35) 75%, transparent 75%, transparent); background-size:28px 28px; animation:stripes 1s linear infinite; }
+  .pbar-fill.done { background:#6CC070; }
+  .pbar-fill.fail { background:var(--warn); }
+  @keyframes stripes { to { background-position:28px 0; } }
+  .steps { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:6px 22px; }
+  .steps li { display:flex; align-items:center; gap:8px; color:var(--mute); font-size:.92rem; }
+  .steps li .ico { width:20px; height:20px; border-radius:50%; border:2px solid var(--line); display:inline-flex; align-items:center; justify-content:center; font-size:.75rem; flex:none; background:#fff; }
+  .steps li.run { color:var(--ink); font-weight:700; }
+  .steps li.run .ico { border-color:var(--line); border-top-color:var(--orange); animation:sp .9s linear infinite; }
+  .steps li.run .lab { animation:pulse 1.4s ease-in-out infinite; }
+  .steps li.done { color:var(--ink); }
+  .steps li.done .ico { background:#6CC070; border-color:#6CC070; color:#fff; animation:pop .35s ease-out; }
+  .steps li.fail .ico { background:var(--warn); border-color:var(--warn); color:#fff; }
+  .steps li .sub { color:var(--mute); font-weight:400; font-size:.82rem; }
+  .steps-msg { color:var(--mute); font-size:.85rem; margin-top:8px; min-height:1.3em; animation:fadein .35s ease; }
+  .logwrap { margin-top:6px; }
+  .logwrap summary { cursor:pointer; color:var(--mute); font-size:.82rem; }
+  /* 場景動畫（canvas） */
+  /* 資料庫面板 */
+  .btn.sm { font-size:.8rem; padding:3px 9px; }
+  .row.panel.db { align-items:center; }
+  .row.panel.db .dbt { font-weight:700; }
+  .row.panel.db .dbg { display:inline-flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  /* 國旗（表格、圖例）與世界地圖 */
+  .flag { width:1.25em; height:.94em; vertical-align:-.1em; margin-right:.35em; border-radius:2px; box-shadow:0 0 0 1px rgba(0,0,0,.18); }
+  .map { border:2px solid var(--navy); border-radius:8px; background:var(--panel); padding:10px 12px 8px; }
+  .map-bar { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+  .map-bar .seg { display:inline-flex; gap:0; flex:none; }
+  .map-bar .seg .btn { font-size:.82rem; padding:4px 10px; border-radius:0; margin-left:-2px; }
+  .map-bar .seg .btn:first-child { border-radius:7px 0 0 7px; margin-left:0; }
+  .map-bar .seg .btn:last-child { border-radius:0 7px 7px 0; }
+  .map-bar .seg .btn.active { background:var(--gold); }
+  .map svg { width:100%; height:auto; display:block; border-radius:6px; border:1px solid var(--line); }
+  .map .sea { fill:var(--sea); }
+  .map path { fill:rgba(255,255,255,0); stroke:rgba(59,42,26,.38); }
+  .map path.has { stroke:var(--navy); }
+  .map path:hover { fill:rgba(255,210,122,.4); }
+  .map .pin rect { fill:#fff; stroke:var(--navy); }
+  .map line.lead { stroke:var(--navy); stroke-dasharray:3 2; opacity:.7; }
+  .map circle.lead { fill:var(--navy); opacity:.7; }
+  .map .pin text { font-family:inherit; font-weight:700; fill:var(--ink); paint-order:stroke; stroke:#fff; stroke-linejoin:round; }
+  .map .pin:hover rect { fill:var(--hover); }
+  .chips { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:8px; font-size:.85rem; }
+  .chips b { color:var(--ink); }
+  #scene { width:100%; height:200px; display:block; cursor:pointer; }
+  @keyframes pop { 0% { transform:scale(.4); } 70% { transform:scale(1.2); } 100% { transform:scale(1); } }
+  @keyframes pulse { 50% { opacity:.55; } }
+  @keyframes fadein { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
+  .notice { background:var(--panel); border:2px solid var(--navy); border-radius:8px; padding:9px 14px; font-size:.9rem; margin:8px 0; }
+  .boot { display:flex; align-items:center; gap:10px; }
+  .spin { width:16px; height:16px; border:3px solid var(--line); border-top-color:var(--orange); border-radius:50%; animation:sp 1s linear infinite; flex:none; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .report { display:grid; grid-template-columns:260px 1fr; gap:16px; }
+  @media (max-width:900px) { .report { grid-template-columns:1fr; } }
+  .alist { border:2px solid var(--navy); border-radius:8px; background:var(--panel); padding:4px; }
+  .alist button { display:block; width:100%; text-align:left; background:none; border:0; border-radius:6px; padding:6px 8px; font-family:inherit; font-size:.92rem; color:var(--ink); cursor:pointer; }
+  .alist button:hover { background:var(--hover); }
+  .alist button.active { background:var(--primary); font-weight:700; }
+  .rbody { display:grid; grid-template-columns:1fr 1.5fr; gap:16px; }
+  @media (max-width:1100px) { .rbody { grid-template-columns:1fr; } }
+  .rbody img { width:100%; border:2px solid var(--navy); border-radius:8px; background:#fff; }
+  .rbody ul { padding-left:1.2em; margin:6px 0; }
+  .rbody .h { font-weight:700; margin-top:8px; }
+  .rbody h2 { margin:0 0 2px; font-size:1.25rem; }
+  .concl { background:#FFF1D6; border:1.5px solid #E0B86A; padding:6px 10px; border-radius:6px; }
+  html[data-theme="navy"] .concl, html[data-theme="green"] .concl { background:var(--stripe); border-color:var(--line); }
+  .stack { display:flex; flex-direction:column; gap:8px; }
+  /* 庫存報告分頁（inventory.js） */
+  .kpi .v.up, td.up, b.up { color:var(--warn); }
+  .kpi .v.down, td.down, b.down { color:#3E8A4F; }
+  .inv-slots { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:10px; width:100%; }
+  .inv-div { display:grid; grid-template-columns:52px 1fr 90px; gap:8px; align-items:center; margin:3px 0; font-size:.82rem; }
+  .inv-div > span:first-child { text-align:right; font-weight:700; }
+  .inv-div b { text-align:right; font-variant-numeric:tabular-nums; }
+  .inv-axis { position:relative; height:16px; border-left:0; background:linear-gradient(to right, transparent calc(50% - 1px), var(--line) calc(50% - 1px), var(--line) calc(50% + 1px), transparent calc(50% + 1px)); }
+  .inv-axis i { position:absolute; top:2px; bottom:2px; border-radius:3px; }
+  .inv-stack { display:flex; height:26px; border-radius:5px; overflow:hidden; margin-top:10px; border:2px solid var(--navy); }
+  .inv-stack i { display:block; height:100%; color:#fff; font-style:normal; font-weight:700; font-size:.78rem; line-height:22px; text-align:center; white-space:nowrap; overflow:hidden; }
+  .inv-checks { list-style:none; padding:0; margin:6px 0; }
+  .inv-checks li { padding:6px 10px; border:1.5px solid var(--line); border-radius:7px; margin:5px 0; background:var(--panel); font-size:.88rem; }
+  .inv-checks li span { font-weight:700; margin-right:4px; }
+  .inv-checks li.inv-warn { border-color:var(--warn); color:var(--warn); }
+  .inv-checks li.inv-ok span { color:#3E8A4F; }
+  .toast { position:fixed; right:16px; bottom:16px; background:var(--navy); color:#fff; padding:10px 16px; border-radius:8px; max-width:min(420px, calc(100vw - 32px)); font-size:.9rem; display:none; z-index:9; white-space:pre-wrap; }
+  .small { font-size:.82rem; color:var(--mute); }
+  /* 名詞說明 */
+  .modal { position:fixed; inset:0; background:rgba(59,42,26,.45); display:none; align-items:center; justify-content:center; z-index:20; padding:16px; }
+  .modal-box { background:var(--card); border:2px solid var(--navy); border-radius:12px; max-width:760px; width:100%; max-height:100%; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,.25); }
+  .modal-box.wide { max-width:960px; }
+  .modal-body .tbl { max-height:none; border:0; border-radius:0; }
+  .modal-box header { display:flex; justify-content:space-between; align-items:center; padding:10px 18px; background:var(--navy); color:var(--gold); border-radius:9px 9px 0 0; font-weight:700; font-size:1.05rem; }
+  .modal-box header button { background:none; border:0; font-size:1.2rem; cursor:pointer; color:var(--gold); }
+  .modal-box .caption { padding:8px 18px 0; }
+  .modal-body { overflow:auto; padding:8px 18px 18px; margin:0; }
+  .modal-body dt { font-weight:700; margin-top:10px; }
+  .modal-body dd { margin:0; }
+  @media (max-width:600px) {
+    .hdr { padding:10px 12px; }
+    .hdr h1 { font-size:1.2rem; letter-spacing:.06em; }
+    .hdr .clock .t { font-size:1.2rem; }
+    .tabs button { padding:5px 9px; font-size:.86rem; }
+    .card { margin:0 4px 20px; padding:10px; }
+    table { font-size:.82rem; }
+    .kpi .v { font-size:1.2rem; }
+  }
+</style>
+</head>
+<body>
+  <header class="hdr">
+    <div class="brand">
+      <h1 data-t="售後零件規劃平台">售後零件規劃平台</h1>
+      <div class="sub"><span id="status" data-t="尚未載入資料">尚未載入資料</span></div>
+    </div>
+    <div class="ctl">
+      <div class="prefs">
+      <select id="lang-sel" title="Language"><option value="zh">中文</option><option value="en">English</option></select>
+      <select id="zoom-sel" title="Zoom"><option value="90">90%</option><option value="100" selected>100%</option><option value="110">110%</option><option value="125">125%</option></select>
+      <select id="font-sel" title="Font"><option value="hand" data-t="手寫風">手寫風</option><option value="sans" data-t="正黑體">正黑體</option><option value="mono" data-t="等寬">等寬</option></select>
+      <select id="theme-sel" title="Theme"><option value="brown" data-t="棕金">棕金</option><option value="navy" data-t="深藍">深藍</option><option value="green" data-t="墨綠">墨綠</option></select>
+      <select id="tz-sel" title="Time zone">
+        <option value="Asia/Taipei" data-t="台北">台北</option><option value="Asia/Bangkok" data-t="曼谷">曼谷</option><option value="Asia/Jakarta" data-t="雅加達">雅加達</option>
+        <option value="Asia/Manila" data-t="馬尼拉">馬尼拉</option><option value="Asia/Ho_Chi_Minh" data-t="河內">河內</option><option value="Asia/Kuala_Lumpur" data-t="吉隆坡">吉隆坡</option>
+        <option value="Asia/Singapore" data-t="新加坡">新加坡</option><option value="Asia/Tokyo" data-t="東京">東京</option><option value="UTC">UTC</option>
+      </select>
+      </div>
+      <div class="clock"><div class="t" id="clock">--:--</div><div class="d"><span id="date"></span> <span id="tzname">台北</span></div></div>
+      <div class="pill" id="boot-pill" title=""><span class="dot"></span><span id="boot-text" data-t="準備中">準備中</span><i class="bar"><b id="boot-bar"></b></i></div>
+      <button class="hbtn" id="gloss-btn" data-t="名詞說明">名詞說明</button>
+      <a href="https://github.com/sandyliu3056/RMA#readme" target="_blank" rel="noopener" data-t="Windows 版下載說明">Windows 版下載說明</a>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="source" class="active"><span class="ico">📂</span><span data-t="資料來源">資料來源</span></button>
+    <button data-tab="db" id="tab-btn-db" style="display:none"><span class="ico">🗄️</span><span data-t="資料庫">資料庫</span></button>
+    <button data-tab="demand"><span class="ico">📈</span><span data-t="需求規劃">需求規劃</span></button>
+    <button data-tab="stock"><span class="ico">📦</span><span data-t="庫存與缺料">庫存與缺料</span></button>
+    <button data-tab="po"><span class="ico">🧾</span><span data-t="訂單與交期">訂單與交期</span></button>
+    <button data-tab="ship"><span class="ico">🚚</span><span data-t="出貨與到貨">出貨與到貨</span></button>
+    <button data-tab="report"><span class="ico">📊</span><span data-t="報表與分析">報表與分析</span></button>
+    <button data-tab="inv"><span class="ico">🏬</span><span data-i="庫存報告">庫存報告</span></button>
+    <button data-tab="coord"><span class="ico">🤝</span><span data-t="跨單位協調">跨單位協調</span></button>
+  </nav>
+
+  <main class="card">
+  <!-- 資料來源 -->
+  <section class="tab active" id="tab-source">
+    <div class="row panel">
+      <label><span data-t="AIO 匯出檔（.xlsx，工作表 AllInOneData）">AIO 匯出檔（.xlsx，工作表 AllInOneData）</span><span class="file off"><input type="file" id="aio" accept=".xlsx,.xlsm" disabled><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
+      <label><span data-t="分析期間">分析期間</span><select id="period" data-t-opts>
+        <option value="上個月 1 日至今" selected>上個月 1 日至今</option><option value="本季">本季</option><option value="最近 3 個月">最近 3 個月</option>
+        <option value="最近 6 個月">最近 6 個月</option><option value="最近 12 個月">最近 12 個月</option><option value="全部">全部</option><option value="自訂起日">自訂起日</option>
+      </select></label>
+      <label id="start-wrap" style="display:none"><span data-t="起日">起日</span><input type="text" id="start" placeholder="2026-08-01" size="12"></label>
+      <button class="btn primary" id="load" disabled data-t="載入並分析">載入並分析</button>
+    </div>
+    <div class="caption" id="src-hint" data-t="選擇 AIO 匯出檔後按「載入並分析」；分析在你的瀏覽器裡進行，不會上傳任何東西。只有按「把這份檔案存入資料庫」才會把案件資料送到你們自己的資料庫。">選擇 AIO 匯出檔後按「載入並分析」；分析在你的瀏覽器裡進行，不會上傳任何東西。只有按「把這份檔案存入資料庫」才會把案件資料送到你們自己的資料庫。</div>
+    <div class="caption" data-t="分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請到「資料庫」分頁把每次匯入存起來，再從那裡載入。">分析期間以資料日期（匯出檔最後一筆建案日）往回算：預設「上個月 1 日至今」，例如資料到 9/21 就分析 8/1 到 9/21。單一匯出檔只有最近一個多月的案件，想看更長的期間請到「資料庫」分頁把每次匯入存起來，再從那裡載入。</div>
+    <div class="kpis" id="src-kpis"></div>
+    <div class="caption" id="src-caption"></div>
+    <div class="caption" id="src-period" style="font-weight:700;color:var(--ink)"></div>
+    <div class="steps-panel" id="steps">
+      <div class="steps-head"><span class="steps-title" id="steps-title"></span><span class="steps-pct" id="steps-pct"></span></div>
+      <div class="pbar"><div class="pbar-fill" id="steps-bar"></div></div>
+      <ol class="steps" id="steps-list"></ol>
+      <div class="steps-msg" id="steps-msg"></div>
+      <details class="logwrap"><summary data-t="詳細記錄">詳細記錄</summary><div class="log" id="log"></div></details>
+    </div>
+    <!-- 世界地圖（各國案件分布）：輪廓在 world.js、座標與國旗對照在 countries.js；還沒載入資料時只畫輪廓 -->
+    <div id="src-map">
+      <div class="section" id="src-map-title" data-t="各國案件分布">各國案件分布</div>
+      <div class="map">
+        <div class="map-bar"><span class="small" id="src-map-note"></span>
+          <span class="seg" id="src-map-view"><button class="btn" data-view="fit" data-t="區域">區域</button><button class="btn active" data-view="world" data-t="全世界">全世界</button></span></div>
+        <div id="src-map-svg"></div>
+        <div class="chips" id="src-map-chips"></div>
+      </div>
+    </div>
+    <div id="src-status" style="display:none">
+      <div class="section" id="src-status-title" data-t="各狀態在途件數">各狀態在途件數</div>
+      <div class="two">
+        <div>
+          <div class="tbl" id="src-status-tbl"></div>
+          <div class="row"><button class="btn" id="src-status-more" data-t="顯示原始狀態明細">顯示原始狀態明細</button><span class="small" id="src-status-hint"></span></div>
+        </div>
+        <div class="chart" id="src-status-chart"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 資料庫（Supabase）：留存每次匯入的檔案，才看得到多期趨勢；程式在 db.js，資料表在 supabase/schema.sql，設定在 config.js。
+       config.js 沒填網址與金鑰時，這個分頁的按鈕不會出現。 -->
+  <section class="tab" id="tab-db">
+    <div class="row panel db" id="db-panel">
+      <span class="dbt" data-t="資料庫">資料庫</span><span id="db-status" class="small"></span>
+      <span id="db-login-form" class="dbg" style="display:none">
+        <input type="email" id="db-email" placeholder="email" autocomplete="username" size="22">
+        <input type="password" id="db-pass" placeholder="password" autocomplete="current-password" size="14">
+        <button class="btn" id="db-login" data-t="登入">登入</button>
+      </span>
+      <span id="db-actions" class="dbg" style="display:none"><button class="btn" id="db-logout" data-t="登出">登出</button></span>
+    </div>
+    <div class="caption" data-t="把每次匯入的 AIO 檔存進資料庫，之後就能選更長的期間（本季、最近 6 個月、全部）看趨勢；同一個案件以最新一次匯出為準。">把每次匯入的 AIO 檔存進資料庫，之後就能選更長的期間（本季、最近 6 個月、全部）看趨勢；同一個案件以最新一次匯出為準。</div>
+    <div id="db-body" style="display:none">
+      <div class="section" data-t="存入這次載入的檔案">存入這次載入的檔案</div>
+      <div class="row panel"><span class="small" id="db-current"></span><button class="btn primary" id="db-save" data-t="把這份檔案存入資料庫" disabled>把這份檔案存入資料庫</button></div>
+      <div class="section" data-t="從資料庫載入">從資料庫載入</div>
+      <div class="row panel">
+        <label><span data-t="分析期間">分析期間</span><select id="db-period" data-t-opts>
+        <option value="上個月 1 日至今" selected>上個月 1 日至今</option><option value="本季">本季</option><option value="最近 3 個月">最近 3 個月</option>
+        <option value="最近 6 個月">最近 6 個月</option><option value="最近 12 個月">最近 12 個月</option><option value="全部">全部</option><option value="自訂起日">自訂起日</option>
+        </select></label>
+        <label id="db-start-wrap" style="display:none"><span data-t="起日">起日</span><input type="text" id="db-start" placeholder="2026-08-01" size="12"></label>
+        <button class="btn primary" id="db-load" data-t="從資料庫載入">從資料庫載入</button>
+      </div>
+      <div class="caption" data-t="載入完成後會自動跳到「資料來源」看摘要；其他分頁也都改用資料庫的資料。">載入完成後會自動跳到「資料來源」看摘要；其他分頁也都改用資料庫的資料。</div>
+      <div class="steps-panel" id="db-steps" style="display:none">
+        <div class="steps-head"><span class="steps-title" id="db-steps-title"></span><span class="steps-pct" id="db-steps-pct"></span></div>
+        <div class="pbar"><div class="pbar-fill" id="db-steps-bar"></div></div>
+        <ol class="steps" id="db-steps-list"></ol>
+        <div class="steps-msg" id="db-steps-msg"></div>
+      </div>
+      <div id="db-history" style="display:none">
+        <div class="section" data-t="匯入紀錄">匯入紀錄</div>
+        <div class="two"><div class="tbl" id="db-imports"></div><div class="chart" id="db-chart"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 需求規劃 -->
+  <section class="tab" id="tab-demand">
+    <div class="row panel">
+      <label><span data-t="彙總依：">彙總依：</span><select id="d-by" data-t-opts><option value="國家">國家</option><option value="類型分組">類型分組</option></select></label>
+      <label><span data-t="預測未來（週）：">預測未來（週）：</span><input type="number" id="d-weeks" min="1" max="13" value="4" style="width:80px"></label>
+      <button class="btn primary" id="d-run" data-t="重新計算">重新計算</button>
+    </div>
+    <div class="section" data-t="每週申請零件顆數（完整週）">每週申請零件顆數（完整週）</div>
+    <div class="two"><div class="tbl" id="d-weekly"></div><div class="chart" id="d-chart"></div></div>
+    <div class="row"><button class="btn" id="d-weekly-dl" data-t="匯出上表">匯出上表</button></div>
+    <div class="section" id="d-fc-title"></div>
+    <div class="tbl" id="d-forecast"></div>
+    <div class="section" data-t="申請次數最多的料號（Top 30）：申請顆數、未使用率、目前待供貨顆數">申請次數最多的料號（Top 30）：申請顆數、未使用率、目前待供貨顆數</div>
+    <div class="tbl tall" id="d-top"></div>
+    <div class="row"><button class="btn" id="d-top-dl" data-t="匯出料號表">匯出料號表</button></div>
+  </section>
+
+  <!-- 庫存與缺料 -->
+  <section class="tab" id="tab-stock">
+    <div class="kpis" id="s-kpis"></div>
+    <div class="section" data-t="缺料料號（Awaiting Spares 案件中待供貨的料號）">缺料料號（Awaiting Spares 案件中待供貨的料號）</div>
+    <div class="tbl" id="s-parts"></div>
+    <div class="row"><button class="btn" id="s-parts-dl" data-t="匯出料號清單">匯出料號清單</button></div>
+    <div class="row panel">
+      <label class="inline"><span data-t="催料清單：等待天數 ≥">催料清單：等待天數 ≥</span><input type="number" id="s-days" min="1" max="60" value="14" style="width:80px"><span data-t="天">天</span></label>
+      <button class="btn primary" id="s-run" data-t="重新整理">重新整理</button>
+    </div>
+    <div class="section" id="s-cases-title" data-t="催料案件清單">催料案件清單</div>
+    <div class="tbl tall" id="s-cases"></div>
+    <div class="row"><button class="btn" id="s-cases-dl" data-t="匯出催料清單">匯出催料清單</button></div>
+  </section>
+
+  <!-- 訂單與交期 -->
+  <section class="tab" id="tab-po">
+    <div class="caption" data-t="AIO 資料沒有採購訂單，這個模組用匯入的訂單檔計算準交率與逾期清單。">AIO 資料沒有採購訂單，這個模組用匯入的訂單檔計算準交率與逾期清單。</div>
+    <div class="row panel">
+      <button class="btn" id="po-tmpl" data-t="產生訂單範本">產生訂單範本</button>
+      <label><span data-t="匯入訂單檔（Excel／CSV）">匯入訂單檔（Excel／CSV）</span><span class="file"><input type="file" id="po-file" accept=".xlsx,.xls,.csv"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
+    </div>
+    <div class="kpis" id="po-kpis"></div>
+    <div id="po-body" style="display:none">
+      <div class="section" data-t="供應商準交率">供應商準交率</div>
+      <div class="tbl" id="po-sup"></div>
+      <div class="section" data-t="逾期與未交訂單">逾期與未交訂單</div>
+      <div class="tbl" id="po-late"></div>
+      <div class="row"><button class="btn" id="po-late-dl" data-t="匯出逾期清單">匯出逾期清單</button></div>
+    </div>
+  </section>
+
+  <!-- 出貨與到貨 -->
+  <section class="tab" id="tab-ship">
+    <div class="kpis" id="h-kpis"></div>
+    <div class="row panel">
+      <label class="inline"><span data-t="保固到期清單：天數內">保固到期清單：天數內</span><input type="number" id="h-days" min="7" max="180" step="7" value="30" style="width:80px"></label>
+      <button class="btn primary" id="h-run" data-t="重新整理">重新整理</button>
+    </div>
+    <div class="two"><div class="hbars" id="h-chart-backlog"></div><div class="hbars" id="h-chart-transit"></div></div>
+    <div class="two">
+      <div>
+        <div class="section" data-t="待出貨積壓（依據點）">待出貨積壓（依據點）</div>
+        <div class="hint" id="h-backlog-hint"></div>
+        <div class="tbl" id="h-backlog"></div>
+        <div class="row"><button class="btn" id="h-backlog-dl" data-t="匯出待出貨積壓">匯出待出貨積壓</button></div>
+      </div>
+      <div>
+        <div class="section" data-t="零件運送中／已配貨（依國家，在途案件）">零件運送中／已配貨（依國家，在途案件）</div>
+        <div class="tbl" id="h-transit"></div>
+      </div>
+    </div>
+    <div class="section" id="h-exp-title" data-t="在途且保固即將到期（含建案時保固內、現已過期）">在途且保固即將到期（含建案時保固內、現已過期）</div>
+    <div class="hint" id="h-exp-hint"></div>
+    <div class="tbl tall" id="h-exp"></div>
+    <div class="row"><button class="btn" id="h-exp-dl" data-t="匯出到期清單">匯出到期清單</button></div>
+  </section>
+
+  <!-- 報表與分析 -->
+  <section class="tab" id="tab-report">
+    <div class="report">
+      <div>
+        <div class="section" data-t="分析項目">分析項目</div>
+        <div class="alist" id="r-list"></div>
+        <div class="section" data-t="匯出">匯出</div>
+        <div class="stack">
+          <button class="btn primary" id="r-xlsx" data-t="匯出 Excel 表格">匯出 Excel 表格</button>
+          <button class="btn primary" id="r-pptx" data-t="匯出 PPT 報告">匯出 PPT 報告</button>
+          <button class="btn" id="r-charts" data-t="匯出全部圖 PNG">匯出全部圖 PNG</button>
+        </div>
+      </div>
+      <div id="r-body"><div class="caption" data-t="請先載入資料，再從左側選一項分析">請先載入資料，再從左側選一項分析</div></div>
+    </div>
+  </section>
+
+  <!-- 跨單位協調 -->
+  <!-- 庫存報告：月底庫存報告（Stock Holding by Ageing）自動計算。程式在 inventory.js（畫面）與 inv_worker.js（讀檔與計算），不需要瀏覽器版 Python。 -->
+  <section class="tab" id="tab-inv">
+    <div class="section" data-i="月底庫存報告（Stock Holding by Ageing）">月底庫存報告（Stock Holding by Ageing）</div>
+    <div class="row panel">
+      <div class="inv-slots">
+        <label><span data-i="CSS Inventory（必填）">CSS Inventory（必填）</span><span class="file"><input type="file" id="inv-css" accept=".xlsx,.xlsm,.xlsb"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
+        <label><span data-i="PLS Picklist（選填）">PLS Picklist（選填）</span><span class="file"><input type="file" id="inv-pick" accept=".xlsx,.xlsm,.xlsb"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
+        <label><span data-i="PLS Stock（選填）">PLS Stock（選填）</span><span class="file"><input type="file" id="inv-stock" accept=".xlsx,.xlsm,.xlsb"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
+        <label><span data-i="主檔 Stock Holding by Ageing（選填）">主檔 Stock Holding by Ageing（選填）</span><span class="file"><input type="file" id="inv-master" accept=".xlsx,.xlsm,.xlsb"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
+      </div>
+      <label><span data-i="資料月份">資料月份</span><select id="inv-month"></select></label>
+      <button class="btn primary" id="inv-run" disabled data-i="計算">計算</button>
+      <button class="btn" id="inv-xlsx" disabled data-i="匯出 Excel">匯出 Excel</button>
+      <span class="small" id="inv-status"></span>
+    </div>
+    <div class="caption" data-i="選擇 auto mail 的三個檔案（AAP_Inventory_CSS_Inventory、PLS_Picklist、PLS_Stock）後按「計算」。主檔可放上個月的（用來算增減）或同一個月的（用來核對數字）。計算在你的瀏覽器裡進行，不會上傳。">選擇 auto mail 的三個檔案（AAP_Inventory_CSS_Inventory、PLS_Picklist、PLS_Stock）後按「計算」。主檔可放上個月的（用來算增減）或同一個月的（用來核對數字）。計算在你的瀏覽器裡進行，不會上傳。</div>
+    <div class="caption" data-i="規則：AAP 不含 AKC、ABD；只算 Good、FG、Defective（Scrap 不算）；open picklist 另外排除 RO、Others，FOC 不計金額；數字全部從明細（View）加總，不使用檔案裡的樞紐快取。">規則：AAP 不含 AKC、ABD；只算 Good、FG、Defective（Scrap 不算）；open picklist 另外排除 RO、Others，FOC 不計金額；數字全部從明細（View）加總，不使用檔案裡的樞紐快取。</div>
+    <div class="caption" id="inv-info"></div>
+    <div id="inv-result" style="display:none">
+      <div class="kpis" id="inv-kpis"></div>
+      <div class="section" data-i="資料檢查">資料檢查</div>
+      <ul class="inv-checks" id="inv-checks"></ul>
+      <div class="section" data-i="各 NS 庫存">各 NS 庫存</div>
+      <div id="inv-ns"></div>
+      <div class="two" style="margin-top:12px">
+        <div class="hbars" id="inv-age"></div>
+        <div class="hbars" id="inv-mom"></div>
+      </div>
+      <div class="two">
+        <div><div class="section" data-i="依倉別">依倉別</div><div id="inv-wh"></div></div>
+        <div><div class="section" data-i="依倉性質">依倉性質</div><div id="inv-nat"></div>
+          <div class="section" data-i="舊庫存前 20 料號">舊庫存前 20 料號</div><div class="caption" id="inv-top-note"></div><div id="inv-top"></div></div>
+      </div>
+      <div id="inv-feili-wrap">
+        <div class="two">
+          <div><div class="section" data-i="Feili（HUB）">Feili（HUB）</div><div id="inv-feili"></div></div>
+          <div><div class="section" data-i="Open picklist 依 NS">Open picklist 依 NS</div><div id="inv-pickns"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-coord">
+    <div class="caption" data-t="待辦存在這台電腦的瀏覽器裡（換電腦看不到）。要帶到別台電腦，請用「下載待辦」存成 JSON，再「還原待辦」上傳。">待辦存在這台電腦的瀏覽器裡（換電腦看不到）。要帶到別台電腦，請用「下載待辦」存成 JSON，再「還原待辦」上傳。</div>
+    <div class="row panel">
+      <label><span data-t="對象單位">對象單位</span><select id="c-unit" data-t-opts></select></label>
+      <label><span data-t="議題">議題</span><input type="text" id="c-topic" size="50"></label>
+      <label><span data-t="負責人">負責人</span><input type="text" id="c-owner" size="10"></label>
+      <label><span data-t="到期日">到期日</span><input type="date" id="c-due"></label>
+      <label><span data-t="狀態">狀態</span><select id="c-status" data-t-opts></select></label>
+      <button class="btn primary" id="c-add" data-t="新增">新增</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="c-seed" data-t="由分析結論產生待辦">由分析結論產生待辦</button>
+      <button class="btn" id="c-dl" data-t="下載待辦（JSON）">下載待辦（JSON）</button>
+      <label><span data-t="還原待辦（JSON）">還原待辦（JSON）</span><span class="file"><input type="file" id="c-restore" accept=".json"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
+      <button class="btn" id="c-csv" data-t="匯出待辦 CSV">匯出待辦 CSV</button>
+    </div>
+    <div class="hint" data-t="逾期未完成的待辦會以紅字顯示">逾期未完成的待辦會以紅字顯示</div>
+    <div class="tbl tall" id="c-table"></div>
+  </section>
+  </main>
+
+<div class="modal" id="gloss">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="gloss-title">
+    <header><span id="gloss-title" data-t="名詞說明">名詞說明</span><button id="gloss-close" aria-label="close">✕</button></header>
+    <div class="caption" data-t="畫面上標有 ⓘ 的欄位或指標，滑鼠停在上面也會顯示說明。">畫面上標有 ⓘ 的欄位或指標，滑鼠停在上面也會顯示說明。</div>
+    <dl class="modal-body" id="gloss-body" tabindex="0"></dl>
+  </div>
+</div>
+<div class="modal" id="detail">
+  <div class="modal-box wide" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <header><span id="detail-title"></span><button id="detail-close" aria-label="close">✕</button></header>
+    <div class="caption" id="detail-hint"></div>
+    <div class="modal-body" id="detail-body" tabindex="0"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<!-- config.local.js 只在本機測試時存在（.gitignore），用來改 Pyodide／wheel 來源 -->
+<script src="config.js?v=2026-10-13g"></script>
+<script src="config.local.js" onerror="void 0"></script>
+<!-- ui_strings.js 由 make_ui_strings.py 從 i18n.py 產生：不必等 Python 啟動就能切換語言、看名詞說明 -->
+<script src="ui_strings.js?v=2026-10-13g"></script>
+<!-- ?v= 要與 app.js 內的 V 一致；改版時一起改，避免瀏覽器用舊快取 -->
+<script src="countries.js?v=2026-10-13g"></script>
+<script src="world.js?v=2026-10-13g"></script>
+<script src="db.js?v=2026-10-13g"></script>
+<script src="app.js?v=2026-10-13g"></script>
+<!-- 庫存報告分頁；?v= 與 inventory.js 內的 V 一致 -->
+<script src="inventory.js?v=2026-11-10a"></script>
+</body>
+</html>
