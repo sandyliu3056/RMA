@@ -129,6 +129,16 @@ openpyxl、python-pptx 等純 Python 套件放在 `wheels/`，網頁自己載入
 | 報表與分析 | 11 項分析的重點、段落、結論、圖與表格；匯出 Excel／PPT／PNG | 引擎 |
 | 跨單位協調 | 待辦追蹤（對象單位、議題、負責人、到期日、狀態），可由分析結論一鍵產生；存於 `協調待辦.json` | 本機 |
 
+## 庫存報告分頁（月底 Stock Holding by Ageing）
+
+和 RMA 分析無關的獨立分頁，不必等瀏覽器版 Python 啟動。程式在 `inventory.js`（畫面）與 `inv_worker.js`（用 SheetJS 讀檔、計算）。
+
+- 檔案：auto mail 的 `AAP_Inventory_CSS_Inventory`（必填）、`PLS_Picklist`、`PLS_Stock`；主檔 `Stock Holding by Ageing`（選填，只讀「include … with TBG」工作表）。主檔是上個月的就算本月比上月；是同一個月的就逐一核對各 NS 金額。
+- 規則：AAP 不含 AKC、ABD；只算 Good、FG、Defective；舊庫存＝服務起始年在「資料年份 − 5」（含）以前（2026 年 → 2021 年以前）；open picklist 另外排除 RO、Others，FOC 不計金額，SubType 與料號開頭（NB.／6M.）依 Mapping (3) 分類；PLS Stock 倉別依檔案內的 Mapping (3)，HUB DR 歸入 Central。
+- 數字一律從明細（View）加總，不用檔案裡的樞紐（auto mail 附檔的樞紐快取常常是舊的）。
+- 畫面：KPI、資料檢查、各 NS（含季底、去年底、年度目標、舊庫存目標與還要減）、庫齡分布、本月比上月、依倉別、依倉性質、舊庫存前 20 料號、Feili（Hold、Central、CTE、open picklist）；「匯出 Excel」下載全部表格。
+- 本機測試若連不到 SheetJS 的 CDN，可在 `config.local.js` 設定 `xlsxUrl`。
+
 ## 訂單檔格式
 
 欄位：訂單號、料號、供應商、數量、下單日、承諾交期、實際到貨日（未到貨留空）、目的國（選填）。以「產生訂單範本」取得樣板；英文欄名（PO Number、Part No.…）也可以。

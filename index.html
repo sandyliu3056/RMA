@@ -218,6 +218,22 @@
   .concl { background:#FFF1D6; border:1.5px solid #E0B86A; padding:6px 10px; border-radius:6px; }
   html[data-theme="navy"] .concl, html[data-theme="green"] .concl { background:var(--stripe); border-color:var(--line); }
   .stack { display:flex; flex-direction:column; gap:8px; }
+  /* 庫存報告分頁（inventory.js） */
+  .kpi .v.up, td.up, b.up { color:var(--warn); }
+  .kpi .v.down, td.down, b.down { color:#3E8A4F; }
+  .inv-slots { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:10px; width:100%; }
+  .inv-div { display:grid; grid-template-columns:52px 1fr 90px; gap:8px; align-items:center; margin:3px 0; font-size:.82rem; }
+  .inv-div > span:first-child { text-align:right; font-weight:700; }
+  .inv-div b { text-align:right; font-variant-numeric:tabular-nums; }
+  .inv-axis { position:relative; height:16px; border-left:0; background:linear-gradient(to right, transparent calc(50% - 1px), var(--line) calc(50% - 1px), var(--line) calc(50% + 1px), transparent calc(50% + 1px)); }
+  .inv-axis i { position:absolute; top:2px; bottom:2px; border-radius:3px; }
+  .inv-stack { display:flex; height:26px; border-radius:5px; overflow:hidden; margin-top:10px; border:2px solid var(--navy); }
+  .inv-stack i { display:block; height:100%; color:#fff; font-style:normal; font-weight:700; font-size:.78rem; line-height:22px; text-align:center; white-space:nowrap; overflow:hidden; }
+  .inv-checks { list-style:none; padding:0; margin:6px 0; }
+  .inv-checks li { padding:6px 10px; border:1.5px solid var(--line); border-radius:7px; margin:5px 0; background:var(--panel); font-size:.88rem; }
+  .inv-checks li span { font-weight:700; margin-right:4px; }
+  .inv-checks li.inv-warn { border-color:var(--warn); color:var(--warn); }
+  .inv-checks li.inv-ok span { color:#3E8A4F; }
   .toast { position:fixed; right:16px; bottom:16px; background:var(--navy); color:#fff; padding:10px 16px; border-radius:8px; max-width:min(420px, calc(100vw - 32px)); font-size:.9rem; display:none; z-index:9; white-space:pre-wrap; }
   .small { font-size:.82rem; color:var(--mute); }
   /* 名詞說明 */
@@ -275,6 +291,7 @@
     <button data-tab="po"><span class="ico">🧾</span><span data-t="訂單與交期">訂單與交期</span></button>
     <button data-tab="ship"><span class="ico">🚚</span><span data-t="出貨與到貨">出貨與到貨</span></button>
     <button data-tab="report"><span class="ico">📊</span><span data-t="報表與分析">報表與分析</span></button>
+    <button data-tab="inv"><span class="ico">🏬</span><span data-i="庫存報告">庫存報告</span></button>
     <button data-tab="coord"><span class="ico">🤝</span><span data-t="跨單位協調">跨單位協調</span></button>
   </nav>
 
@@ -456,6 +473,48 @@
   </section>
 
   <!-- 跨單位協調 -->
+  <!-- 庫存報告：月底庫存報告（Stock Holding by Ageing）自動計算。程式在 inventory.js（畫面）與 inv_worker.js（讀檔與計算），不需要瀏覽器版 Python。 -->
+  <section class="tab" id="tab-inv">
+    <div class="section" data-i="月底庫存報告（Stock Holding by Ageing）">月底庫存報告（Stock Holding by Ageing）</div>
+    <div class="row panel">
+      <div class="inv-slots">
+        <label><span data-i="CSS Inventory（必填）">CSS Inventory（必填）</span><span class="file"><input type="file" id="inv-css" accept=".xlsx,.xlsm,.xlsb"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
+        <label><span data-i="PLS Picklist（選填）">PLS Picklist（選填）</span><span class="file"><input type="file" id="inv-pick" accept=".xlsx,.xlsm,.xlsb"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
+        <label><span data-i="PLS Stock（選填）">PLS Stock（選填）</span><span class="file"><input type="file" id="inv-stock" accept=".xlsx,.xlsm,.xlsb"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
+        <label><span data-i="主檔 Stock Holding by Ageing（選填）">主檔 Stock Holding by Ageing（選填）</span><span class="file"><input type="file" id="inv-master" accept=".xlsx,.xlsm,.xlsb"><span class="btn sm" data-t="選擇檔案">選擇檔案</span><span class="fname" data-t="尚未選擇檔案">尚未選擇檔案</span></span></label>
+      </div>
+      <label><span data-i="資料月份">資料月份</span><select id="inv-month"></select></label>
+      <button class="btn primary" id="inv-run" disabled data-i="計算">計算</button>
+      <button class="btn" id="inv-xlsx" disabled data-i="匯出 Excel">匯出 Excel</button>
+      <span class="small" id="inv-status"></span>
+    </div>
+    <div class="caption" data-i="選擇 auto mail 的三個檔案（AAP_Inventory_CSS_Inventory、PLS_Picklist、PLS_Stock）後按「計算」。主檔可放上個月的（用來算增減）或同一個月的（用來核對數字）。計算在你的瀏覽器裡進行，不會上傳。">選擇 auto mail 的三個檔案（AAP_Inventory_CSS_Inventory、PLS_Picklist、PLS_Stock）後按「計算」。主檔可放上個月的（用來算增減）或同一個月的（用來核對數字）。計算在你的瀏覽器裡進行，不會上傳。</div>
+    <div class="caption" data-i="規則：AAP 不含 AKC、ABD；只算 Good、FG、Defective（Scrap 不算）；open picklist 另外排除 RO、Others，FOC 不計金額；數字全部從明細（View）加總，不使用檔案裡的樞紐快取。">規則：AAP 不含 AKC、ABD；只算 Good、FG、Defective（Scrap 不算）；open picklist 另外排除 RO、Others，FOC 不計金額；數字全部從明細（View）加總，不使用檔案裡的樞紐快取。</div>
+    <div class="caption" id="inv-info"></div>
+    <div id="inv-result" style="display:none">
+      <div class="kpis" id="inv-kpis"></div>
+      <div class="section" data-i="資料檢查">資料檢查</div>
+      <ul class="inv-checks" id="inv-checks"></ul>
+      <div class="section" data-i="各 NS 庫存">各 NS 庫存</div>
+      <div id="inv-ns"></div>
+      <div class="two" style="margin-top:12px">
+        <div class="hbars" id="inv-age"></div>
+        <div class="hbars" id="inv-mom"></div>
+      </div>
+      <div class="two">
+        <div><div class="section" data-i="依倉別">依倉別</div><div id="inv-wh"></div></div>
+        <div><div class="section" data-i="依倉性質">依倉性質</div><div id="inv-nat"></div>
+          <div class="section" data-i="舊庫存前 20 料號">舊庫存前 20 料號</div><div class="caption" id="inv-top-note"></div><div id="inv-top"></div></div>
+      </div>
+      <div id="inv-feili-wrap">
+        <div class="two">
+          <div><div class="section" data-i="Feili（HUB）">Feili（HUB）</div><div id="inv-feili"></div></div>
+          <div><div class="section" data-i="Open picklist 依 NS">Open picklist 依 NS</div><div id="inv-pickns"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="tab" id="tab-coord">
     <div class="caption" data-t="待辦存在這台電腦的瀏覽器裡（換電腦看不到）。要帶到別台電腦，請用「下載待辦」存成 JSON，再「還原待辦」上傳。">待辦存在這台電腦的瀏覽器裡（換電腦看不到）。要帶到別台電腦，請用「下載待辦」存成 JSON，再「還原待辦」上傳。</div>
     <div class="row panel">
@@ -502,5 +561,7 @@
 <script src="world.js?v=2026-10-13g"></script>
 <script src="db.js?v=2026-10-13g"></script>
 <script src="app.js?v=2026-10-13g"></script>
+<!-- 庫存報告分頁；?v= 與 inventory.js 內的 V 一致 -->
+<script src="inventory.js?v=2026-11-10a"></script>
 </body>
 </html>
